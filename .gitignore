@@ -1,0 +1,5 @@
+.venv
+config/screener_config.properties
+.idea
+data/output
+src/oldScreenerDontUse.py
