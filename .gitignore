@@ -3,3 +3,5 @@ config/screener_config.properties
 .idea
 data/output
 src/oldScreenerDontUse.py
+__pycache__
+src/__pycache__
