@@ -15,10 +15,9 @@ def load_symbols_from_properties():
     return symbols
 
 def analyze_stock(symbol):
-    stock = yf.Ticker(symbol)
-    info = stock.info
-
-    try:
+        try:
+        stock = yf.Ticker(symbol)
+        info = stock.info
         analysis = {
             'Symbol': symbol,
             'PE Ratio': info.get('trailingPE', None),
