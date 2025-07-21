@@ -15,7 +15,8 @@ def load_symbols_from_properties():
     return symbols
 
 def analyze_stock(symbol):
-        try:
+
+    try:
         stock = yf.Ticker(symbol)
         info = stock.info
         analysis = {
