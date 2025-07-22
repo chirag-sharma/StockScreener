@@ -12,7 +12,7 @@ def load_symbols_from_config():
     Loads stock symbols for a given sector from the configuration file.
 
     Returns:
-        dict: Mapping of company names to ticker symbols.
+        list: List of ticker symbols.
 
     Raises:
         ValueError: If the sector is not specified in the config.
@@ -23,7 +23,8 @@ def load_symbols_from_config():
     if not sector:
         raise ValueError("Sector not specified in config.")
     symbols = load_tickers(sector)
-    return symbols
+    return symbols  # already a list
+
 
 def analyze_stock(symbol):
     """
@@ -80,8 +81,12 @@ def write_to_excel(results, filename='value_analysis.xlsx'):
     """
     df = pd.DataFrame(results)
 
-    # Save results to Excel
+    # Prepare output path
     output_path = f'../data/output/{filename}'
+    import os
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    # Save results to Excel
     df.to_excel(output_path, index=False)
 
     # Load workbook and worksheet for formatting
@@ -99,7 +104,7 @@ def write_to_excel(results, filename='value_analysis.xlsx'):
                 ws.cell(row=row, column=col_idx).fill = red_fill
 
     wb.save(output_path)
-    print(f"\n✅ Analysis written to {output_path}")
+    print(f"\n Analysis written to {output_path}")
 
 def main():
     """
@@ -108,11 +113,11 @@ def main():
     - Performs analysis for each symbol.
     - Writes results to Excel.
     """
-    symbols_dict = load_symbols_from_config()
+    symbols = load_symbols_from_config()
     results = []
 
-    for name, symbol in symbols_dict.items():
-        print(f"Analyzing {name} ({symbol})...")
+    for symbol in symbols:
+        print(f"Analyzing {symbol}...")
         data = analyze_stock(symbol)
         if data:
             results.append(data)

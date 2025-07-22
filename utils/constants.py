@@ -4,6 +4,7 @@
 This module contains all static constants used across the stock screener project.
 Includes mapping of scope identifiers to Screener.in URLs for indices and sectors.
 """
+import os
 
 # Scope to Screener URL map for index-based and sector-based stock groupings
 SCOPE_URL_MAP = {
@@ -28,3 +29,8 @@ SCOPE_URL_MAP = {
     "infra_sector": "https://www.screener.in/screens/1263254/infrastructure-sector/",
     "chemicals_sector": "https://www.screener.in/screens/1263255/chemicals-sector/",
 }
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # directory of constants.py
+BASE_CACHE_DIR = os.path.join("..", "data", "input", "tickers")
+BASE_CACHE_DIR = os.path.abspath(BASE_CACHE_DIR)
+
