@@ -5,4 +5,5 @@ data/output
 src/oldScreenerDontUse.py
 __pycache__/
 src/__pycache__/
-
+dummy.py
+readME.txt

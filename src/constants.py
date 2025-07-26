@@ -1,9 +1,10 @@
-# utils/constants.py
+# src/constants.py
 
 """
 This module contains all static constants used across the stock screener project.
 Includes mapping of scope identifiers to Screener.in URLs for indices and sectors.
 """
+import configparser
 import os
 
 # Scope to Screener URL map for index-based and sector-based stock groupings
@@ -33,4 +34,26 @@ SCOPE_URL_MAP = {
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # directory of constants.py
 BASE_CACHE_DIR = os.path.join("..", "data", "input", "tickers")
 BASE_CACHE_DIR = os.path.abspath(BASE_CACHE_DIR)
+
+config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'screener_config.properties')
+config = configparser.ConfigParser()
+config.read(config_path)
+
+# Thresholds from config
+ROE_MIN = float(config['DEFAULT'].get('roe_min', 15))
+PE_RATIO_MAX = float(config['DEFAULT'].get('pe_ratio_max', 20))
+DE_RATIO_MAX = float(config['DEFAULT'].get('de_ratio_max', 1))
+CURRENT_RATIO_MIN = float(config['DEFAULT'].get('current_ratio_min', 1.5))
+PRICE_TO_BOOK_MAX = float(config['DEFAULT'].get('price_to_book_max', 3))
+PROMOTER_HOLDING_MIN = float(config['DEFAULT'].get('promoter_holding_min', 50))
+
+THRESHOLDS = {
+    'roe_min': ROE_MIN,
+    'pe_ratio_max': PE_RATIO_MAX,
+    'debt_to_equity_max': DE_RATIO_MAX,
+    'current_ratio_min': CURRENT_RATIO_MIN,
+    'price_to_book_max': PRICE_TO_BOOK_MAX,
+    'promoter_holding_min': PROMOTER_HOLDING_MIN
+}
+
 

@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from utils.constants import SCOPE_URL_MAP
+from src.constants import SCOPE_URL_MAP
 
 
 def fetch_tickers_from_screener(scope: str) -> list[str]:

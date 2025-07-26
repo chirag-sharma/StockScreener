@@ -1,10 +1,10 @@
-# ticker_loader.py
+# tickerLoader.py
 
 import os
 import json
 from datetime import datetime, date
-from utils.constants import BASE_CACHE_DIR, SCOPE_URL_MAP
-from utils.screener_scraper import fetch_tickers_from_screener
+from src.constants import BASE_CACHE_DIR, SCOPE_URL_MAP
+from utils.screenerScraper import fetch_tickers_from_screener
 
 def get_cache_file(scope: str) -> str:
     return os.path.join(BASE_CACHE_DIR, f"{scope}.json")
