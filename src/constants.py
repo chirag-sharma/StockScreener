@@ -46,6 +46,23 @@ DE_RATIO_MAX = float(config['DEFAULT'].get('de_ratio_max', 1))
 CURRENT_RATIO_MIN = float(config['DEFAULT'].get('current_ratio_min', 1.5))
 PRICE_TO_BOOK_MAX = float(config['DEFAULT'].get('price_to_book_max', 3))
 PROMOTER_HOLDING_MIN = float(config['DEFAULT'].get('promoter_holding_min', 50))
+EPS_GROWTH_MIN = float(config['DEFAULT'].get('eps_growth_min', 10))
+ROA_MIN = float(config['DEFAULT'].get('roa_min', 5))
+DIVIDEND_YIELD_MIN = float(config['DEFAULT'].get('dividend_yield_min', 1))
+FREE_CASH_FLOW_MIN = float(config['DEFAULT'].get('free_cash_flow_min', 0))
+PRICE_TO_CASH_FLOW_MAX = float(config['DEFAULT'].get('price_to_cash_flow_max', 15))
+ENTERPRISE_VALUE_MIN = float(config['DEFAULT'].get('enterprise_value_min', 0))
+EV_EBITDA_MAX = float(config['DEFAULT'].get('ev_ebitda_max', 15))
+INTEREST_COVERAGE_MIN = float(config['DEFAULT'].get('interest_coverage_min', 3))
+QUICK_RATIO_MIN = float(config['DEFAULT'].get('quick_ratio_min', 1))
+NET_PROFIT_MARGIN_MIN = float(config['DEFAULT'].get('net_profit_margin_min', 10))
+OPERATING_MARGIN_MIN = float(config['DEFAULT'].get('operating_margin_min', 10))
+RSI_MIN = float(config['DEFAULT'].get('rsi_min', 30))
+RSI_MAX = float(config['DEFAULT'].get('rsi_max', 70))
+CASH_CONVERSION_RATIO_MIN = float(config['DEFAULT'].get('cash_conversion_ratio_min', 1))
+DIVIDEND_PAYOUT_RATIO_MAX = float(config['DEFAULT'].get('dividend_payout_ratio_max', 60))
+MARKET_CAP_MIN = float(config['DEFAULT'].get('market_cap_min', 5000))
+MARKET_CAP_MAX = float(config['DEFAULT'].get('market_cap_max', 1000000))
 
 THRESHOLDS = {
     'roe_min': ROE_MIN,
@@ -53,7 +70,23 @@ THRESHOLDS = {
     'debt_to_equity_max': DE_RATIO_MAX,
     'current_ratio_min': CURRENT_RATIO_MIN,
     'price_to_book_max': PRICE_TO_BOOK_MAX,
-    'promoter_holding_min': PROMOTER_HOLDING_MIN
+    'promoter_holding_min': PROMOTER_HOLDING_MIN,
+    'eps_growth_min': EPS_GROWTH_MIN,
+    'roa_min': ROA_MIN,
+    'dividend_yield_min': DIVIDEND_YIELD_MIN,
+    'free_cash_flow_min': FREE_CASH_FLOW_MIN,
+    'price_to_cash_flow_max': PRICE_TO_CASH_FLOW_MAX,
+    'enterprise_value_min': ENTERPRISE_VALUE_MIN,
+    'ev_ebitda_max': EV_EBITDA_MAX,
+    'interest_coverage_min': INTEREST_COVERAGE_MIN,
+    'quick_ratio_min': QUICK_RATIO_MIN,
+    'net_profit_margin_min': NET_PROFIT_MARGIN_MIN,
+    'operating_margin_min': OPERATING_MARGIN_MIN,
+    'rsi_range': (RSI_MIN, RSI_MAX),
+    'cash_conversion_ratio_min': CASH_CONVERSION_RATIO_MIN,
+    'dividend_payout_ratio_max': DIVIDEND_PAYOUT_RATIO_MAX,
+    'market_cap_range': (MARKET_CAP_MIN, MARKET_CAP_MAX)
 }
+
 
 
