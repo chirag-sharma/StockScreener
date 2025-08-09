@@ -31,6 +31,7 @@ try:
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.metrics import mean_absolute_error, mean_squared_error
     from sklearn.preprocessing import StandardScaler
+    from sklearn.impute import SimpleImputer
     HAS_SKLEARN = True
 except ImportError:
     HAS_SKLEARN = False
@@ -55,16 +56,18 @@ class PricePredictionService:
     Advanced price prediction service using multiple methodologies
     """
     
-    def __init__(self, symbol: str, prediction_days: int = 30):
+    def __init__(self, symbol: str, prediction_days: int = 30, deterministic: bool = True):
         """
         Initialize the price prediction service
         
         Args:
             symbol: Stock symbol (e.g., 'RELIANCE.NS')
             prediction_days: Number of days to predict ahead
+            deterministic: If True, use fixed random seeds for consistent results
         """
         self.symbol = symbol
         self.prediction_days = prediction_days
+        self.deterministic = deterministic
         self.data = None
         self.current_price = None
         self.fundamental_data = None
@@ -141,6 +144,123 @@ class PricePredictionService:
         results["risk_assessment"] = self._calculate_prediction_risk()
         
         return results
+    
+    def get_multi_period_predictions(self) -> Dict:
+        """
+        Get price predictions for multiple time periods (6-12 months with 1-month intervals)
+        
+        Returns:
+            Dict containing predictions for each time period
+        """
+        if self.data is None or self.data.empty:
+            return {"error": "No data available for prediction"}
+        
+        # Define prediction periods (6, 7, 8, 9, 10, 11, 12 months)
+        prediction_periods = {
+            "6_months": 180,   # ~6 months in days
+            "7_months": 210,   # ~7 months in days  
+            "8_months": 240,   # ~8 months in days
+            "9_months": 270,   # ~9 months in days
+            "10_months": 300,  # ~10 months in days
+            "11_months": 330,  # ~11 months in days
+            "12_months": 365   # ~12 months in days
+        }
+        
+        results = {
+            "symbol": self.symbol,
+            "current_price": self.current_price,
+            "analysis_date": datetime.now().strftime("%Y-%m-%d"),
+            "multi_period_predictions": {}
+        }
+        
+        # Store original prediction_days
+        original_prediction_days = self.prediction_days
+        
+        try:
+            # Generate predictions for each period
+            for period_name, days in prediction_periods.items():
+                logger.info(f"Generating {period_name} prediction for {self.symbol}")
+                
+                # Update prediction days for this period
+                self.prediction_days = days
+                
+                # Get comprehensive prediction for this period
+                period_prediction = {
+                    "period": period_name,
+                    "prediction_days": days,
+                    "prediction_date": (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d"),
+                    "methods": {}
+                }
+                
+                # Run all prediction methods for this period
+                period_prediction["methods"]["technical"] = self._technical_analysis_prediction()
+                period_prediction["methods"]["fundamental"] = self._fundamental_analysis_prediction()
+                
+                if HAS_SKLEARN:
+                    period_prediction["methods"]["machine_learning"] = self._machine_learning_prediction()
+                
+                if HAS_STATSMODELS:
+                    period_prediction["methods"]["time_series"] = self._time_series_prediction()
+                
+                period_prediction["methods"]["pattern"] = self._pattern_recognition_prediction()
+                period_prediction["methods"]["volume"] = self._volume_analysis_prediction()
+                
+                # Calculate ensemble prediction for this period
+                period_prediction["ensemble"] = self._ensemble_prediction(period_prediction["methods"])
+                
+                # Calculate risk assessment for this period
+                period_prediction["risk_assessment"] = self._calculate_prediction_risk()
+                
+                results["multi_period_predictions"][period_name] = period_prediction
+                
+        except Exception as e:
+            logger.error(f"Error in multi-period prediction for {self.symbol}: {e}")
+            results["error"] = f"Multi-period prediction failed: {str(e)}"
+        
+        finally:
+            # Restore original prediction_days
+            self.prediction_days = original_prediction_days
+        
+        # Calculate summary statistics across all periods
+        results["summary"] = self._calculate_multi_period_summary(results["multi_period_predictions"])
+        
+        return results
+    
+    def _calculate_multi_period_summary(self, predictions: Dict) -> Dict:
+        """Calculate summary statistics across all time periods"""
+        try:
+            ensemble_prices = []
+            confidences = []
+            
+            for period_name, prediction in predictions.items():
+                if "ensemble" in prediction and "predicted_price" in prediction["ensemble"]:
+                    ensemble_prices.append(prediction["ensemble"]["predicted_price"])
+                    if "confidence" in prediction["ensemble"]:
+                        confidences.append(prediction["ensemble"]["confidence"])
+            
+            if ensemble_prices:
+                return {
+                    "price_range": {
+                        "min": round(min(ensemble_prices), 2),
+                        "max": round(max(ensemble_prices), 2),
+                        "average": round(np.mean(ensemble_prices), 2)
+                    },
+                    "confidence_range": {
+                        "min": round(min(confidences), 2) if confidences else 0,
+                        "max": round(max(confidences), 2) if confidences else 0,
+                        "average": round(np.mean(confidences), 2) if confidences else 0
+                    },
+                    "growth_projection": {
+                        "6_month_growth": round(((ensemble_prices[0] - self.current_price) / self.current_price * 100), 2) if ensemble_prices else 0,
+                        "12_month_growth": round(((ensemble_prices[-1] - self.current_price) / self.current_price * 100), 2) if ensemble_prices else 0
+                    }
+                }
+            else:
+                return {"error": "No valid predictions found for summary calculation"}
+                
+        except Exception as e:
+            logger.error(f"Error calculating multi-period summary: {e}")
+            return {"error": f"Summary calculation failed: {str(e)}"}
     
     def _technical_analysis_prediction(self) -> Dict:
         """Technical analysis-based price prediction"""
@@ -271,13 +391,16 @@ class PricePredictionService:
             data['Volume_SMA'] = data['Volume'].rolling(window=20).mean()
             data['Price_Change'] = data['Close'].pct_change()
             data['Volume_Change'] = data['Volume'].pct_change()
-            data['High_Low_Ratio'] = data['High'] / data['Low']
+            
+            # Safe division to avoid infinity
+            data['High_Low_Ratio'] = data['High'] / data['Low'].replace(0, np.nan)
             
             # Create features matrix
             features = ['Open', 'High', 'Low', 'Volume', 'SMA_5', 'SMA_20', 
                        'Volume_SMA', 'Price_Change', 'Volume_Change', 'High_Low_Ratio']
             
-            # Remove NaN values
+            # Remove NaN values and infinite values
+            data = data.replace([np.inf, -np.inf], np.nan)
             data = data.dropna()
             
             if len(data) < 50:  # Need minimum data for ML
@@ -285,6 +408,14 @@ class PricePredictionService:
             
             X = data[features].values
             y = data['Close'].values
+            
+            # Additional check for infinite values in features
+            if not np.all(np.isfinite(X)):
+                logger.warning("Infinite values found in features, cleaning data")
+                # Replace remaining infinite values with column median
+                from sklearn.impute import SimpleImputer
+                imputer = SimpleImputer(strategy='median')
+                X = imputer.fit_transform(X)
             
             # Split data (use last 20% as validation)
             split_point = int(len(data) * 0.8)
@@ -345,12 +476,16 @@ class PricePredictionService:
             if not HAS_STATSMODELS:
                 return {"error": "Statsmodels not available"}
             
+            # Set random seed for deterministic results if requested
+            if self.deterministic:
+                np.random.seed(42)
+            
             prices = self.data['Close'].dropna()
             
             if len(prices) < 100:
                 return {"error": "Insufficient data for time series analysis"}
             
-            # Simple ARIMA model (1,1,1)
+            # Simple ARIMA model (1,1,1) with deterministic fitting
             model = ARIMA(prices, order=(1, 1, 1))
             fitted_model = model.fit()
             
@@ -358,9 +493,13 @@ class PricePredictionService:
             forecast = fitted_model.forecast(steps=self.prediction_days)
             predicted_price = forecast.iloc[-1] if hasattr(forecast, 'iloc') else forecast[-1]
             
-            # Calculate confidence based on model AIC
+            # Calculate confidence based on model AIC and prediction horizon
             aic = fitted_model.aic
-            confidence = max(0.3, min(0.7, 1000 / aic))
+            base_confidence = max(0.3, min(0.7, 1000 / aic))
+            
+            # Adjust confidence based on prediction horizon (longer periods = lower confidence)
+            horizon_factor = max(0.5, 1.0 - (self.prediction_days - 30) / 1000)
+            confidence = base_confidence * horizon_factor
             
             return {
                 "predicted_price": round(predicted_price, 2),
@@ -578,6 +717,67 @@ class PricePredictionService:
             }
         else:
             return {"error": "Unable to generate prediction"}
+    
+    def get_simplified_multi_period_predictions(self) -> Dict:
+        """
+        Get simplified multi-period predictions with key metrics only
+        
+        Returns:
+            Dict with essential prediction data for each time period
+        """
+        full_predictions = self.get_multi_period_predictions()
+        
+        if "error" in full_predictions:
+            return full_predictions
+        
+        simplified = {
+            "symbol": self.symbol,
+            "current_price": self.current_price,
+            "analysis_date": full_predictions["analysis_date"],
+            "predictions": {}
+        }
+        
+        # Extract key metrics for each period
+        for period_name, prediction in full_predictions.get("multi_period_predictions", {}).items():
+            if "ensemble" in prediction:
+                ensemble = prediction["ensemble"]
+                simplified["predictions"][period_name] = {
+                    "months": int(period_name.split("_")[0]),
+                    "predicted_price": ensemble.get("predicted_price", self.current_price),
+                    "confidence": ensemble.get("confidence", 0.5),
+                    "prediction_date": prediction.get("prediction_date", ""),
+                    "growth_percent": round(((ensemble.get("predicted_price", self.current_price) - self.current_price) / self.current_price * 100), 2)
+                }
+        
+        # Add summary
+        if "summary" in full_predictions:
+            simplified["summary"] = full_predictions["summary"]
+        
+        return simplified
+
+
+def get_multi_period_batch_predictions(symbols: List[str]) -> Dict:
+    """
+    Get multi-period predictions for multiple stocks
+    
+    Args:
+        symbols: List of stock symbols
+        
+    Returns:
+        Dictionary with multi-period predictions for each symbol
+    """
+    results = {}
+    
+    for symbol in symbols:
+        try:
+            logger.info(f"Getting multi-period predictions for {symbol}")
+            predictor = PricePredictionService(symbol)
+            results[symbol] = predictor.get_simplified_multi_period_predictions()
+        except Exception as e:
+            logger.error(f"Failed to get multi-period predictions for {symbol}: {e}")
+            results[symbol] = {"error": f"Multi-period prediction failed: {str(e)}"}
+    
+    return results
 
 
 def get_batch_predictions(symbols: List[str], prediction_days: int = 30) -> Dict:

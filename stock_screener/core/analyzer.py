@@ -729,15 +729,53 @@ class DetailedAnalyzer:
             }
     
     def _get_price_prediction(self, symbol: str) -> Dict:
-        """Get price prediction for the stock"""
+        """Get comprehensive price prediction including multi-period forecasts for the stock"""
         if not HAS_PRICE_PREDICTION:
             return {"error": "Price prediction service not available"}
         
         try:
             predictor = PricePredictionService(symbol, prediction_days=30)
-            prediction = predictor.get_quick_prediction()
-            logger.info(f"Price prediction for {symbol}: {prediction.get('predicted_price', 'N/A')}")
-            return prediction
+            
+            # Get both single-period comprehensive predictions and multi-period predictions
+            comprehensive_results = predictor.get_comprehensive_predictions()
+            multi_period_results = predictor.get_simplified_multi_period_predictions()
+            
+            # Extract the ensemble result for the main output (30-day prediction)
+            main_prediction = {}
+            if "ensemble" in comprehensive_results and "predicted_price" in comprehensive_results["ensemble"]:
+                ensemble = comprehensive_results["ensemble"]
+                current_price = comprehensive_results.get("current_price", 0)
+                predicted_price = ensemble["predicted_price"]
+                
+                # Calculate price change percentage
+                price_change_percent = 0
+                if current_price > 0:
+                    price_change_percent = round((predicted_price - current_price) / current_price * 100, 2)
+                
+                main_prediction = {
+                    "symbol": symbol,
+                    "current_price": current_price,
+                    "predicted_price": predicted_price,
+                    "price_change_percent": price_change_percent,
+                    "confidence": ensemble["confidence"],
+                    "method": "Comprehensive Prediction (7 Methods + Ensemble)",
+                    "methods_used": list(comprehensive_results["methods"].keys()),
+                    "risk_level": comprehensive_results.get("risk_assessment", {}).get("risk_level", "Medium"),
+                    "recommendation": ensemble.get("recommendation", "Hold")
+                }
+                
+                # Add multi-period predictions if available
+                if "predictions" in multi_period_results:
+                    main_prediction["multi_period_predictions"] = multi_period_results["predictions"]
+                    main_prediction["multi_period_summary"] = multi_period_results.get("summary", {})
+                
+                logger.info(f"Comprehensive price prediction for {symbol}: {main_prediction.get('predicted_price', 'N/A')} (Confidence: {main_prediction.get('confidence', 'N/A')})")
+                return main_prediction
+            else:
+                # Fallback to quick prediction if comprehensive fails
+                prediction = predictor.get_quick_prediction()
+                logger.warning(f"Fell back to quick prediction for {symbol}")
+                return prediction
         except Exception as e:
             logger.error(f"Price prediction failed for {symbol}: {e}")
             return {"error": f"Price prediction failed: {str(e)}"}
@@ -1184,6 +1222,12 @@ IMPORTANT:
         prediction_confidences = []
         prediction_methods = []
         
+        # Multi-period prediction columns
+        price_6_months = []
+        price_12_months = []
+        growth_6_months = []
+        growth_12_months = []
+        
         total_stocks = len(df)
         
         for idx, (_, row) in enumerate(df.iterrows(), 1):
@@ -1218,6 +1262,13 @@ IMPORTANT:
             prediction_confidences.append(ai_result.get('prediction_confidence', 'N/A'))
             prediction_methods.append(ai_result.get('prediction_method', 'N/A'))
             
+            # Multi-period prediction fields
+            multi_period_preds = ai_result.get('multi_period_predictions', {})
+            price_6_months.append(multi_period_preds.get('6_months', {}).get('predicted_price', 'N/A'))
+            price_12_months.append(multi_period_preds.get('12_months', {}).get('predicted_price', 'N/A'))
+            growth_6_months.append(multi_period_preds.get('6_months', {}).get('growth_percent', 'N/A'))
+            growth_12_months.append(multi_period_preds.get('12_months', {}).get('growth_percent', 'N/A'))
+            
             # Small delay to avoid API rate limits
             if idx < total_stocks:
                 time.sleep(1)  # 1 second delay between API calls
@@ -1244,6 +1295,12 @@ IMPORTANT:
         df['Price Change %'] = price_change_percents
         df['Prediction Confidence'] = prediction_confidences
         df['Prediction Method'] = prediction_methods
+        
+        # Multi-Period Prediction Columns
+        df['Price Target (6M)'] = price_6_months
+        df['Price Target (12M)'] = price_12_months
+        df['Growth 6M (%)'] = growth_6_months
+        df['Growth 12M (%)'] = growth_12_months
         
         logger.info("Comprehensive AI analysis completed for all stocks")
         

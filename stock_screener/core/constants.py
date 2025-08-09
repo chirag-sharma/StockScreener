@@ -33,8 +33,14 @@ SCOPE_URL_MAP = {
 
 # Base directory of the current file
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Directory for cached ticker data
-BASE_CACHE_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "data", "input", "tickers"))
+
+# Project root directory (two levels up from core)
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
+
+# Data directories - point to root-level data directory
+BASE_CACHE_DIR = os.path.join(PROJECT_ROOT, "data", "input", "tickers")
+BASE_INPUT_DIR = os.path.join(PROJECT_ROOT, "data", "input")  
+BASE_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "output")
 
 # Load configuration from properties file
 config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'screener_config.properties')

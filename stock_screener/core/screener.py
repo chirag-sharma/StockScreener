@@ -32,6 +32,10 @@ from datetime import datetime, timedelta
 import configparser
 import time
 
+# Add the project root to Python path for module imports
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 # Core services
 from stock_screener.services.excelExporter import ExcelExporter
 from stock_screener.services.stockAnalyzer import StockAnalyzer
@@ -40,6 +44,9 @@ from stock_screener.utils.tickerLoader import load_tickers
 
 # Import the comprehensive analysis functionality
 from stock_screener.core.analyzer import DetailedAnalyzer
+
+# Import constants for proper path handling
+from stock_screener.core.constants import BASE_OUTPUT_DIR
 
 # Environment variable loading
 try:
@@ -64,8 +71,8 @@ class UnifiedScreener:
         self.config_file = config_file or 'stock_screener/config/screener_config.properties'
         self.config = self._load_config()
         
-        # Set output file path
-        self.output_file = 'data/output/comprehensive_analysis.xlsx'
+        # Set output file path using constants
+        self.output_file = os.path.join(BASE_OUTPUT_DIR, 'comprehensive_analysis.xlsx')
         
         # Initialize AI settings from config
         self.ai_enabled = self.config.getboolean('DEFAULT', 'ai_analysis_enabled', fallback=True)
@@ -133,8 +140,8 @@ class UnifiedScreener:
             logger.info(f"✅ Basic analysis completed for {len(all_results)} stocks")
             
             # Step 3: Create temporary Excel file for DetailedAnalyzer
-            temp_file = 'data/output/temp_basic_analysis.xlsx'
-            os.makedirs(os.path.dirname(temp_file), exist_ok=True)
+            temp_file = os.path.join(BASE_OUTPUT_DIR, 'temp_basic_analysis.xlsx')
+            os.makedirs(BASE_OUTPUT_DIR, exist_ok=True)
             
             exporter = ExcelExporter(temp_file)
             exporter.write_data(all_results)

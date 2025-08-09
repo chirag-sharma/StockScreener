@@ -1,0 +1,20 @@
+{
+  "symbol": "RELIANCE.NS",
+  "prediction_days": 30,
+  "mode": "comprehensive",
+  "cache_date": "2025-08-09",
+  "cache_timestamp": "2025-08-09T21:09:42.289427",
+  "prediction": {
+    "predicted_price": 2718.0,
+    "confidence": 0.42,
+    "current_price": 1367.800048828125,
+    "methods": [
+      "technical",
+      "fundamental",
+      "machine_learning",
+      "time_series",
+      "pattern",
+      "volume"
+    ]
+  }
+}

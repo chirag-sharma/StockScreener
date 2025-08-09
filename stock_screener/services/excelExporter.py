@@ -8,7 +8,7 @@ import logging
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font
 from openpyxl.utils import get_column_letter
-from stock_screener.core.constants import THRESHOLDS
+from stock_screener.core.constants import THRESHOLDS, BASE_OUTPUT_DIR
 import os
 
 
@@ -17,10 +17,12 @@ class ExcelExporter:
     Handles exporting analysis results to an Excel file with enhanced conditional formatting 
     based on precise value thresholds and performance indicators.
     """
-    def __init__(self, output_path='data/output/value_analysis.xlsx'):
+    def __init__(self, output_path=None):
         """
         Initialize the exporter with enhanced color coding based on value performance.
         """
+        if output_path is None:
+            output_path = os.path.join(BASE_OUTPUT_DIR, 'value_analysis.xlsx')
         self.output_path = output_path
         
         # Enhanced color scheme for precise value-based formatting
