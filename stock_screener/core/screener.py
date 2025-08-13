@@ -17,7 +17,7 @@ Usage:
     python -m stock_screener.core.screener
     
 Configuration:
-    Edit stock_screener/config/screener_config.properties to adjust:
+    Edit config/screener_config.properties to adjust:
     - AI provider and settings
     - Investment criteria thresholds
     - News integration preferences
@@ -68,7 +68,7 @@ class UnifiedScreener:
     
     def __init__(self, config_file=None):
         """Initialize with configuration file."""
-        self.config_file = config_file or 'stock_screener/config/screener_config.properties'
+        self.config_file = config_file or 'config/screener_config.properties'
         self.config = self._load_config()
         
         # Set output file path using constants

@@ -485,13 +485,17 @@ class PricePredictionService:
             if len(prices) < 100:
                 return {"error": "Insufficient data for time series analysis"}
             
+            # Convert to simple numeric series to avoid date index warnings
+            # ARIMA works with the values, not the dates
+            price_values = prices.values
+            
             # Simple ARIMA model (1,1,1) with deterministic fitting
-            model = ARIMA(prices, order=(1, 1, 1))
+            model = ARIMA(price_values, order=(1, 1, 1))
             fitted_model = model.fit()
             
             # Forecast
             forecast = fitted_model.forecast(steps=self.prediction_days)
-            predicted_price = forecast.iloc[-1] if hasattr(forecast, 'iloc') else forecast[-1]
+            predicted_price = forecast[-1] if hasattr(forecast, '__getitem__') else forecast
             
             # Calculate confidence based on model AIC and prediction horizon
             aic = fitted_model.aic

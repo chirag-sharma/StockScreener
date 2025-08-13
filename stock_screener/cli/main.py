@@ -35,7 +35,7 @@ Examples:
     parser.add_argument(
         '--config',
         metavar='FILE',
-        help='Path to configuration file (default: stock_screener/config/screener_config.properties)'
+        help='Path to configuration file (default: config/screener_config.properties)'
     )
     
     parser.add_argument(

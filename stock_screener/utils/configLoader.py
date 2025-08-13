@@ -18,7 +18,7 @@ def load_symbols_from_config():
     """
     config = ConfigParser()
     import os
-    config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'screener_config.properties')
+    config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'screener_config.properties')
     config.read(config_path)
     sector = config.get('DEFAULT', 'sector', fallback=None)
 

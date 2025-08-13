@@ -43,7 +43,7 @@ BASE_INPUT_DIR = os.path.join(PROJECT_ROOT, "data", "input")
 BASE_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "output")
 
 # Load configuration from properties file
-config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'screener_config.properties')
+config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config', 'screener_config.properties')
 config = configparser.ConfigParser()
 config.read(config_path)
 

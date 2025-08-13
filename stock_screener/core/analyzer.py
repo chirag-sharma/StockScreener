@@ -714,6 +714,10 @@ class DetailedAnalyzer:
                 ai_result['prediction_confidence'] = price_prediction.get('confidence', 'N/A')
                 ai_result['prediction_method'] = price_prediction.get('method', 'N/A')
                 
+                # Include multi-period predictions if available
+                if 'multi_period_predictions' in price_prediction:
+                    ai_result['multi_period_predictions'] = price_prediction['multi_period_predictions']
+                
                 # Override target price if we have a better prediction
                 if 'target_price' not in ai_result or ai_result['target_price'] == 'N/A':
                     ai_result['target_price'] = str(price_prediction.get('predicted_price', 'N/A'))
@@ -1324,8 +1328,14 @@ IMPORTANT:
         # Ensure output directory exists
         os.makedirs(os.path.dirname(self.output_file), exist_ok=True)
         
-        # Sort by Investment Readiness Score (highest first)
-        df_sorted = df.sort_values('Investment Readiness Score', ascending=False)
+        # Sort by available score column (highest first)
+        if 'Investment Readiness Score' in df.columns:
+            df_sorted = df.sort_values('Investment Readiness Score', ascending=False)
+        elif 'Value Score (1-10)' in df.columns:
+            df_sorted = df.sort_values('Value Score (1-10)', ascending=False)
+        else:
+            # Fallback to Symbol sorting if no score columns available
+            df_sorted = df.sort_values('Symbol', ascending=True)
         
         # Save to Excel
         df_sorted.to_excel(self.output_file, index=False)

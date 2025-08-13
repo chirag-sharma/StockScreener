@@ -120,10 +120,20 @@ def load_tickers(scope_or_file_path: str) -> list:
             if is_cache_valid(data):
                 print(f"[CACHE HIT] Using cached tickers for scope: {scope}")
                 return data["tickers"]
+            else:
+                # Cache exists but date is old - just update the date instead of fetching new data
+                if "tickers" in data and data["tickers"]:
+                    print(f"[CACHE UPDATE] Updating date for existing tickers in scope: {scope}")
+                    today = datetime.today().strftime("%Y-%m-%d")
+                    data["date"] = today
+                    # Save the updated date back to the file
+                    with open(file_path, "w") as f:
+                        json.dump(data, f, indent=2)
+                    return data["tickers"]
         except Exception as e:
             print(f"[WARN] Corrupted cache file for {scope}: {e}")
 
-    # Cache miss or invalid data; fetch tickers from Screener using normalized scope
+    # Cache miss or corrupted file; fetch tickers from Screener using normalized scope
     tickers = fetch_tickers_from_screener(normalized_scope)
     today = datetime.today().strftime("%Y-%m-%d")
 
