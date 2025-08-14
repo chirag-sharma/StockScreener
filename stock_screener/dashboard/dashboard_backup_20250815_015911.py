@@ -31,7 +31,7 @@ except ImportError:
     HAS_PRICE_PREDICTION = False
     print("Price Prediction Service not available - using basic price charts only")
 
-# Enhanced page configuration with dark theme
+# Enhanced page configuration
 st.set_page_config(
     page_title="AI Stock Screener Pro",
     page_icon="🚀", 
@@ -39,490 +39,188 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Modern Dark Theme CSS styling
+# Professional CSS styling
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
-    /* Global Dark Theme Variables */
-    :root {
-        --bg-primary: #0d1117;
-        --bg-secondary: #161b22;
-        --bg-tertiary: #21262d;
-        --bg-quaternary: #30363d;
-        --text-primary: #f0f6fc;
-        --text-secondary: #8b949e;
-        --text-muted: #6e7681;
-        --border-primary: #30363d;
-        --border-secondary: #21262d;
-        --accent-primary: #58a6ff;
-        --accent-secondary: #7c3aed;
-        --success: #3fb950;
-        --warning: #d29922;
-        --danger: #f85149;
-        --info: #79c0ff;
+    .main {
+        font-family: 'Inter', sans-serif;
     }
     
-    /* Main Container Dark Theme */
-    .stApp {
-        background: var(--bg-primary) !important;
-        color: var(--text-primary) !important;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-    
-    /* Sidebar Dark Theme */
-    .css-1d391kg, .css-1lcbmhc, .stSidebar > div {
-        background: var(--bg-secondary) !important;
-        border-right: 1px solid var(--border-primary) !important;
-    }
-    
-    .css-1lcbmhc .stSelectbox label, .css-1lcbmhc .stMultiSelect label {
-        color: var(--text-primary) !important;
-        font-weight: 500 !important;
-    }
-    
-    /* Main Content Area */
-    .main .block-container {
-        background: var(--bg-primary) !important;
-        padding-top: 2rem !important;
-        max-width: 100% !important;
-    }
-    
-    /* Headers with Modern Styling */
     .main-header {
-        font-size: 3.5rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+        font-size: 3rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        background-clip: text;
         text-align: center;
-        margin-bottom: 3rem;
-        letter-spacing: -0.02em;
+        margin-bottom: 2rem;
         animation: fadeInUp 0.8s ease-out;
     }
     
     .sub-header {
-        font-size: 1.75rem;
+        font-size: 1.5rem;
         font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 1.5rem;
-        padding: 1rem 0;
-        border-bottom: 2px solid var(--border-primary);
-        position: relative;
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        border-left: 4px solid #3498db;
+        padding-left: 1rem;
     }
     
-    .sub-header::before {
-        content: '';
-        position: absolute;
-        bottom: -2px;
-        left: 0;
-        width: 60px;
-        height: 2px;
-        background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
-    }
-    
-    /* Modern Card Styling */
     .metric-card {
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-primary);
-        border-radius: 16px;
-        padding: 2rem;
-        margin-bottom: 1.5rem;
-        transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-        backdrop-filter: blur(20px);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .metric-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
-        opacity: 0;
-        transition: opacity 0.3s ease;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #e1e8ed;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
     }
     
     .metric-card:hover {
-        transform: translateY(-4px);
-        border-color: var(--accent-primary);
-        box-shadow: 0 20px 40px rgba(88, 166, 255, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     }
     
-    .metric-card:hover::before {
-        opacity: 1;
-    }
-    
-    /* Status Badges with Modern Design */
     .grade-strong-buy {
-        background: linear-gradient(135deg, var(--success), #2da44e);
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
         color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 50px;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
         font-weight: 600;
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        box-shadow: 0 4px 20px rgba(63, 185, 80, 0.25);
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(46, 204, 113, 0.3);
     }
     
     .grade-buy {
-        background: linear-gradient(135deg, var(--accent-primary), #4493f8);
+        background: linear-gradient(135deg, #3498db, #2980b9);
         color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 50px;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
         font-weight: 600;
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        box-shadow: 0 4px 20px rgba(88, 166, 255, 0.25);
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
+        text-align: center;
     }
     
     .grade-hold {
-        background: linear-gradient(135deg, var(--warning), #bf8700);
+        background: linear-gradient(135deg, #f39c12, #e67e22);
         color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 50px;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
         font-weight: 600;
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        box-shadow: 0 4px 20px rgba(210, 153, 34, 0.25);
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
+        text-align: center;
     }
     
-    .grade-avoid {
-        background: linear-gradient(135deg, var(--danger), #da3633);
-        color: white;
-        padding: 0.75rem 1.5rem;
-        border-radius: 50px;
-        font-weight: 600;
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        box-shadow: 0 4px 20px rgba(248, 81, 73, 0.25);
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    /* Modern Status Indicators */
     .status-online {
-        color: var(--success);
+        color: #27ae60;
         font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    
-    .status-online::before {
-        content: '●';
-        font-size: 0.75rem;
-        animation: pulse 2s infinite;
     }
     
     .performance-positive {
-        color: var(--success);
+        color: #27ae60;
         font-weight: 600;
-        font-family: 'JetBrains Mono', monospace;
     }
     
     .performance-negative {
-        color: var(--danger);
+        color: #e74c3c;
         font-weight: 600;
-        font-family: 'JetBrains Mono', monospace;
     }
     
-    /* Enhanced Price Cards */
     .price-card {
-        background: var(--bg-tertiary);
-        border: 1px solid var(--border-primary);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .price-card::before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 4px;
-        background: linear-gradient(180deg, var(--accent-primary), var(--accent-secondary));
-        opacity: 0;
-        transition: opacity 0.3s ease;
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid #3498db;
+        transition: all 0.3s ease;
     }
     
     .price-card:hover {
         transform: translateY(-2px);
-        border-color: var(--accent-primary);
-        box-shadow: 0 12px 32px rgba(88, 166, 255, 0.15);
-    }
-    
-    .price-card:hover::before {
-        opacity: 1;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     }
     
     .price-positive {
-        color: var(--success);
+        color: #27ae60;
         font-weight: 600;
-        font-family: 'JetBrains Mono', monospace;
     }
     
     .price-negative {
-        color: var(--danger);
+        color: #e74c3c;
         font-weight: 600;
-        font-family: 'JetBrains Mono', monospace;
-    }
-    
-    /* Modern Recommendation Badges */
-    .recommendation-strong-buy, .recommendation-buy, .recommendation-hold {
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
     }
     
     .recommendation-strong-buy {
-        background: var(--success);
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
         color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
     }
     
     .recommendation-buy {
-        background: var(--accent-primary);
+        background: linear-gradient(135deg, #3498db, #2980b9);
         color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
     }
     
     .recommendation-hold {
-        background: var(--warning);
+        background: linear-gradient(135deg, #f39c12, #e67e22);
         color: white;
+        padding: 0.3rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
     }
     
-    /* Enhanced Metrics Grid */
     .metrics-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1.5rem;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-primary);
-        padding: 2rem;
-        border-radius: 16px;
-        margin: 2rem 0;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        margin: 1rem 0;
     }
     
     .metrics-grid-item {
         text-align: center;
-        padding: 1rem;
-        background: var(--bg-tertiary);
-        border-radius: 12px;
-        border: 1px solid var(--border-secondary);
-        transition: all 0.3s ease;
-    }
-    
-    .metrics-grid-item:hover {
-        transform: translateY(-2px);
-        border-color: var(--accent-primary);
-        box-shadow: 0 8px 24px rgba(88, 166, 255, 0.1);
     }
     
     .metrics-label {
-        font-weight: 500;
-        color: var(--text-secondary);
-        font-size: 0.875rem;
-        margin-bottom: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .metrics-value {
-        font-size: 1.5rem;
-        font-weight: 700;
-        font-family: 'JetBrains Mono', monospace;
+        font-weight: 600;
+        color: #2c3e50;
+        font-size: 0.9rem;
         margin-bottom: 0.5rem;
     }
     
+    .metrics-value {
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
     .metrics-score {
-        color: var(--accent-primary);
+        color: #3498db;
     }
     
     .metrics-current {
-        color: var(--text-primary);
+        color: #2c3e50;
     }
     
     .metrics-target {
-        color: var(--success);
+        color: #27ae60;
     }
     
     .metrics-upside {
-        color: var(--success);
+        color: #27ae60;
     }
     
-    .metrics-negative {
-        color: var(--danger);
-    }
-    
-    /* Streamlit Component Overrides */
-    .stSelectbox > div > div > div {
-        background: var(--bg-tertiary) !important;
-        border-color: var(--border-primary) !important;
-        color: var(--text-primary) !important;
-    }
-    
-    .stMultiSelect > div > div > div {
-        background: var(--bg-tertiary) !important;
-        border-color: var(--border-primary) !important;
-    }
-    
-    .stTabs [data-baseweb="tab-list"] {
-        background: var(--bg-secondary) !important;
-        border-radius: 12px !important;
-        padding: 0.5rem !important;
-        border: 1px solid var(--border-primary) !important;
-        gap: 0.5rem !important;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        background: transparent !important;
-        color: var(--text-secondary) !important;
-        border-radius: 8px !important;
-        padding: 0.75rem 1.5rem !important;
-        font-weight: 500 !important;
-        transition: all 0.3s ease !important;
-        border: none !important;
-    }
-    
-    .stTabs [data-baseweb="tab"]:hover {
-        background: var(--bg-tertiary) !important;
-        color: var(--text-primary) !important;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: var(--accent-primary) !important;
-        color: white !important;
-        box-shadow: 0 4px 12px rgba(88, 166, 255, 0.3) !important;
-    }
-    
-    .stDataFrame {
-        background: var(--bg-secondary) !important;
-        border-radius: 12px !important;
-        overflow: hidden !important;
-        border: 1px solid var(--border-primary) !important;
-    }
-    
-    .stDataFrame table {
-        background: var(--bg-secondary) !important;
-        color: var(--text-primary) !important;
-    }
-    
-    .stDataFrame th {
-        background: var(--bg-tertiary) !important;
-        color: var(--text-primary) !important;
-        font-weight: 600 !important;
-        border-bottom: 2px solid var(--border-primary) !important;
-        padding: 1rem 0.75rem !important;
-    }
-    
-    .stDataFrame td {
-        background: var(--bg-secondary) !important;
-        color: var(--text-primary) !important;
-        border-bottom: 1px solid var(--border-secondary) !important;
-        padding: 0.875rem 0.75rem !important;
-    }
-    
-    /* Button Styling */
-    .stButton > button {
-        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 0.75rem 2rem !important;
-        font-weight: 600 !important;
-        transition: all 0.3s ease !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 24px rgba(88, 166, 255, 0.3) !important;
-    }
-    
-    .stDownloadButton > button {
-        background: linear-gradient(135deg, var(--success), #2da44e) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        padding: 0.75rem 2rem !important;
-        font-weight: 600 !important;
-        transition: all 0.3s ease !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
-    }
-    
-    .stDownloadButton > button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 24px rgba(63, 185, 80, 0.3) !important;
-    }
-    
-    /* Input Styling */
-    .stTextInput > div > div > input {
-        background: var(--bg-tertiary) !important;
-        border: 1px solid var(--border-primary) !important;
-        border-radius: 8px !important;
-        color: var(--text-primary) !important;
-        padding: 0.75rem !important;
-    }
-    
-    .stTextInput > div > div > input:focus {
-        border-color: var(--accent-primary) !important;
-        box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2) !important;
-    }
-    
-    .stSlider > div > div > div {
-        background: var(--bg-tertiary) !important;
-    }
-    
-    .stSlider .stSlider-thumb {
-        background: var(--accent-primary) !important;
-    }
-    
-    .stSlider .stSlider-track {
-        background: var(--border-primary) !important;
-    }
-    
-    .stSlider .stSlider-trackActive {
-        background: var(--accent-primary) !important;
-    }
-    
-    /* Plotly Chart Styling */
-    .js-plotly-plot {
-        background: var(--bg-secondary) !important;
-        border-radius: 12px !important;
-        border: 1px solid var(--border-primary) !important;
-    }
-    
-    /* Animations */
     @keyframes fadeInUp {
         from {
             opacity: 0;
@@ -532,34 +230,6 @@ st.markdown("""
             opacity: 1;
             transform: translate3d(0, 0, 0);
         }
-    }
-    
-    @keyframes pulse {
-        0%, 100% {
-            opacity: 1;
-        }
-        50% {
-            opacity: 0.5;
-        }
-    }
-    
-    /* Scrollbar Styling */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: var(--bg-primary);
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: var(--border-primary);
-        border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-        background: var(--accent-primary);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -678,7 +348,7 @@ def load_data():
             'Market Cap (Cr)': 'market_cap',  # Fixed: actual column name with (Cr)
             'Value Score': 'value_score',
             'Investment Recommendation': 'investment_grade',
-            'Price Target (12M)': 'target_price',  # Fixed: use the numeric column
+            'Target Price (12M)': 'target_price',  # Fixed: actual column name
             'Business Quality': 'business_quality',
             'AI Reasoning': 'ai_reasoning',
             'AI Sentiment': 'ai_sentiment',
@@ -702,10 +372,6 @@ def load_data():
             
             # Ensure target_price is numeric and handle NaN values
             if 'target_price' in df.columns:
-                # Clean currency symbols and convert to numeric
-                if df['target_price'].dtype == 'object':
-                    # Remove currency symbols like ₹, $, etc. and convert to float
-                    df['target_price'] = df['target_price'].astype(str).str.replace(r'[₹$€£¥,]', '', regex=True)
                 df['target_price'] = pd.to_numeric(df['target_price'], errors='coerce')
                 df['target_price'] = df['target_price'].fillna(0)
             
@@ -756,272 +422,87 @@ def show_status_bar():
         current_time = datetime.now().strftime("%H:%M:%S IST")
         st.html(f'<span class="status-online">🟢 Last Update: {current_time}</span>')
 
-def create_modern_summary_metrics(df):
-    """Create modern summary metrics cards with dark theme"""
-    st.html('<div class="sub-header">📊 Portfolio Overview</div>')
-    
+def create_summary_metrics(df):
+    """Create summary metrics cards"""
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         total_stocks = len(df)
-        metric_html = f"""
+        st.markdown(f"""
         <div class="metric-card">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="
-                    width: 48px;
-                    height: 48px;
-                    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-                    border-radius: 12px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.5rem;
-                ">📈</div>
-                <div>
-                    <div style="
-                        font-size: 0.875rem;
-                        color: var(--text-secondary);
-                        font-weight: 500;
-                        margin-bottom: 0.25rem;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                    ">Total Stocks</div>
-                    <div style="
-                        font-size: 2rem;
-                        font-weight: 700;
-                        color: var(--text-primary);
-                        font-family: 'JetBrains Mono', monospace;
-                    ">{total_stocks}</div>
-                </div>
-            </div>
+            <h3 style="margin: 0; color: #2c3e50;">Total Stocks</h3>
+            <h2 style="margin: 0.5rem 0 0 0; color: #3498db;">{total_stocks}</h2>
         </div>
-        """
-        st.html(metric_html)
+        """, unsafe_allow_html=True)
     
     with col2:
         if 'investment_grade' in df.columns:
             strong_buys = len(df[df['investment_grade'].str.contains('Strong Buy|STRONG_BUY', case=False, na=False)])
         else:
             strong_buys = 0
-        metric_html = f"""
+        st.markdown(f"""
         <div class="metric-card">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="
-                    width: 48px;
-                    height: 48px;
-                    background: linear-gradient(135deg, var(--success), #2da44e);
-                    border-radius: 12px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.5rem;
-                ">🎯</div>
-                <div>
-                    <div style="
-                        font-size: 0.875rem;
-                        color: var(--text-secondary);
-                        font-weight: 500;
-                        margin-bottom: 0.25rem;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                    ">Strong Buys</div>
-                    <div style="
-                        font-size: 2rem;
-                        font-weight: 700;
-                        color: var(--success);
-                        font-family: 'JetBrains Mono', monospace;
-                    ">{strong_buys}</div>
-                </div>
-            </div>
+            <h3 style="margin: 0; color: #2c3e50;">Strong Buys</h3>
+            <h2 style="margin: 0.5rem 0 0 0; color: #27ae60;">{strong_buys}</h2>
         </div>
-        """
-        st.html(metric_html)
+        """, unsafe_allow_html=True)
     
     with col3:
         if 'value_score' in df.columns:
             avg_score = df['value_score'].mean()
         else:
             avg_score = 0
-        metric_html = f"""
+        st.markdown(f"""
         <div class="metric-card">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="
-                    width: 48px;
-                    height: 48px;
-                    background: linear-gradient(135deg, var(--warning), #bf8700);
-                    border-radius: 12px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.5rem;
-                ">⭐</div>
-                <div>
-                    <div style="
-                        font-size: 0.875rem;
-                        color: var(--text-secondary);
-                        font-weight: 500;
-                        margin-bottom: 0.25rem;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                    ">Avg Score</div>
-                    <div style="
-                        font-size: 2rem;
-                        font-weight: 700;
-                        color: var(--warning);
-                        font-family: 'JetBrains Mono', monospace;
-                    ">{avg_score:.1f}</div>
-                </div>
-            </div>
+            <h3 style="margin: 0; color: #2c3e50;">Avg Score</h3>
+            <h2 style="margin: 0.5rem 0 0 0; color: #f39c12;">{avg_score:.1f}</h2>
         </div>
-        """
-        st.html(metric_html)
+        """, unsafe_allow_html=True)
     
     with col4:
         if 'target_price' in df.columns and 'current_price' in df.columns:
-            # Handle potential division by zero and NaN values
-            valid_data = df.dropna(subset=['target_price', 'current_price'])
-            valid_data = valid_data[valid_data['current_price'] > 0]
-            if len(valid_data) > 0:
-                avg_upside = ((valid_data['target_price'] - valid_data['current_price']) / valid_data['current_price'] * 100).mean()
-            else:
-                avg_upside = 0
+            avg_upside = ((df['target_price'] - df['current_price']) / df['current_price'] * 100).mean()
         else:
             avg_upside = 0
-        
-        # Proper conditional styling for upside values
-        if avg_upside > 0:
-            upside_color = "var(--success)"
-            upside_icon = "📈"
-        elif avg_upside < 0:
-            upside_color = "var(--danger)"
-            upside_icon = "�"
-        else:  # avg_upside == 0 or N/A
-            upside_color = "var(--text-secondary)"
-            upside_icon = "�"
-        
-        metric_html = f"""
+        st.markdown(f"""
         <div class="metric-card">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="
-                    width: 48px;
-                    height: 48px;
-                    background: linear-gradient(135deg, {upside_color}, {upside_color}dd);
-                    border-radius: 12px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 1.5rem;
-                ">{upside_icon}</div>
-                <div>
-                    <div style="
-                        font-size: 0.875rem;
-                        color: var(--text-secondary);
-                        font-weight: 500;
-                        margin-bottom: 0.25rem;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                    ">Avg Upside</div>
-                    <div style="
-                        font-size: 2rem;
-                        font-weight: 700;
-                        color: {upside_color};
-                        font-family: 'JetBrains Mono', monospace;
-                    ">{avg_upside:+.1f}%</div>
-                </div>
-            </div>
+            <h3 style="margin: 0; color: #2c3e50;">Avg Upside</h3>
+            <h2 style="margin: 0.5rem 0 0 0; color: #9b59b6;">{avg_upside:.1f}%</h2>
         </div>
-        """
-        st.html(metric_html)
-
-def get_dark_theme_config():
-    """Get dark theme configuration for Plotly charts"""
-    return {
-        'layout': {
-            'paper_bgcolor': '#161b22',
-            'plot_bgcolor': '#0d1117',
-            'font': {
-                'color': '#f0f6fc',
-                'family': 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
-            },
-            'colorway': ['#58a6ff', '#7c3aed', '#3fb950', '#d29922', '#f85149', '#79c0ff', '#bc8cff', '#56d4dd'],
-            'title': {
-                'font': {'color': '#f0f6fc', 'size': 18, 'family': 'Inter'},
-                'x': 0.5
-            },
-            'xaxis': {
-                'gridcolor': '#30363d',
-                'linecolor': '#30363d',
-                'tickcolor': '#30363d',
-                'color': '#8b949e'
-            },
-            'yaxis': {
-                'gridcolor': '#30363d',
-                'linecolor': '#30363d',
-                'tickcolor': '#30363d',
-                'color': '#8b949e'
-            },
-            'legend': {
-                'font': {'color': '#f0f6fc'}
-            },
-            'margin': {'l': 40, 'r': 40, 't': 60, 'b': 40}
-        }
-    }
+        """, unsafe_allow_html=True)
 
 def create_investment_chart(df):
-    """Create investment grade distribution chart with dark theme"""
+    """Create investment grade distribution chart"""
     if 'investment_grade' not in df.columns:
         st.warning("⚠️ Investment grade data not available")
         return
     
     grade_counts = df['investment_grade'].value_counts()
     
-    # Dark theme colors
     colors = {
-        'Strong Buy': '#3fb950',
-        'Buy': '#58a6ff',
-        'Hold': '#d29922',
-        'Avoid': '#f85149',
-        'Weak Hold': '#bc8cff'
+        'Strong Buy': '#2ecc71',
+        'Buy': '#3498db',
+        'Hold': '#f39c12',
+        'Avoid': '#e74c3c'
     }
     
     fig = go.Figure(data=[go.Pie(
         labels=grade_counts.index,
         values=grade_counts.values,
         hole=0.6,
-        marker_colors=[colors.get(grade, '#8b949e') for grade in grade_counts.index],
+        marker_colors=[colors.get(grade, '#95a5a6') for grade in grade_counts.index],
         textinfo='label+percent',
-        textposition='outside',
-        textfont={'size': 14, 'color': '#f0f6fc'},
-        hovertemplate='<b>%{label}</b><br>' +
-                      'Count: %{value}<br>' +
-                      'Percentage: %{percent}<br>' +
-                      '<extra></extra>'
+        textposition='outside'
     )])
     
-    # Apply dark theme configuration
-    theme_config = get_dark_theme_config()
     fig.update_layout(
-        paper_bgcolor=theme_config['layout']['paper_bgcolor'],
-        plot_bgcolor=theme_config['layout']['plot_bgcolor'],
-        font=theme_config['layout']['font'],
-        title={
-            'text': '🎯 Investment Grade Distribution',
-            'font': {'color': '#f0f6fc', 'size': 18, 'family': 'Inter'},
-            'x': 0.5
-        },
-        height=500,
-        showlegend=True,
-        legend={
-            'orientation': 'h',
-            'y': -0.1,
-            'x': 0.5,
-            'xanchor': 'center',
-            'font': {'color': '#f0f6fc', 'size': 12}
-        },
-        margin={'l': 40, 'r': 40, 't': 60, 'b': 40}
+        title='🎯 Investment Grade Distribution',
+        title_x=0.5,
+        font_family='Inter',
+        height=500
     )
     
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    st.plotly_chart(fig, use_container_width=True)
 
 def create_stock_cards(df, limit=5):
     """Create enhanced stock cards"""
@@ -1059,19 +540,11 @@ def create_stock_cards(df, limit=5):
         else:
             grade_class = "grade-hold"
         
-        # Format values safely with proper styling
+        # Format values safely
         safe_score = f"{value_score:.1f}" if pd.notna(value_score) else "N/A"
         safe_current = format_currency(current_price)
         safe_target = format_currency(target_price)
         safe_upside = f"{upside:+.1f}%" if upside != 0 else "N/A"
-        
-        # Determine upside styling class
-        if safe_upside == "N/A":
-            upside_class = "metrics-current"  # Neutral color for N/A
-        elif upside > 0:
-            upside_class = "metrics-upside"   # Green for positive
-        else:
-            upside_class = "metrics-negative" # Red for negative
         
         html_content = f"""
         <div class="metric-card" style="margin: 1rem 0;">
@@ -1100,7 +573,7 @@ def create_stock_cards(df, limit=5):
                 </div>
                 <div class="metrics-grid-item">
                     <div class="metrics-label">Upside</div>
-                    <div class="metrics-value {upside_class}">{safe_upside}</div>
+                    <div class="metrics-value metrics-upside">{safe_upside}</div>
                 </div>
             </div>
         </div>
@@ -1183,14 +656,6 @@ def create_detailed_stock_analysis(df):
             safe_target = format_currency(target_price)  
             safe_upside = f"{upside:+.1f}%" if pd.notna(upside) and upside != 0 else "N/A"
             
-            # Determine upside styling class
-            if safe_upside == "N/A":
-                upside_class = "metrics-current"  # Neutral color for N/A
-            elif upside > 0:
-                upside_class = "metrics-upside"   # Green for positive
-            else:
-                upside_class = "metrics-negative" # Red for negative
-            
             st.markdown(f"""
             <div class="metrics-grid">
                 <div class="metrics-grid-item">
@@ -1207,7 +672,7 @@ def create_detailed_stock_analysis(df):
                 </div>
                 <div class="metrics-grid-item">
                     <div class="metrics-label">Upside</div>
-                    <div class="metrics-value {upside_class}">{safe_upside}</div>
+                    <div class="metrics-value metrics-upside">{safe_upside}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -2021,92 +1486,13 @@ def show_ai_insights(df):
                 else:
                     st.markdown("*AI analysis not available for this stock.*")
 
-def show_modern_status_bar():
-    """Display modern status bar with system information"""
-    current_time = datetime.now().strftime("%H:%M:%S")
-    
-    # Create status bar with modern design
-    status_html = f"""
-    <div style="
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-primary);
-        border-radius: 12px;
-        padding: 1rem 1.5rem;
-        margin: 1rem 0 2rem 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 1rem;
-    ">
-        <div style="display: flex; align-items: center; gap: 1.5rem;">
-            <span class="status-online">
-                <span style="
-                    display: inline-block;
-                    width: 8px;
-                    height: 8px;
-                    background: var(--success);
-                    border-radius: 50%;
-                    margin-right: 0.5rem;
-                    animation: pulse 2s infinite;
-                "></span>
-                AI System Online
-            </span>
-            <span class="status-online">
-                <span style="
-                    display: inline-block;
-                    width: 8px;
-                    height: 8px;
-                    background: var(--success);
-                    border-radius: 50%;
-                    margin-right: 0.5rem;
-                    animation: pulse 2s infinite;
-                "></span>
-                Data Feed Live
-            </span>
-        </div>
-        <div style="
-            color: var(--text-secondary);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.875rem;
-        ">
-            Last Updated: {current_time}
-        </div>
-    </div>
-    """
-    
-    st.html(status_html)
-
-def show_dashboard_header():
-    """Display modern dashboard header with enhanced styling"""
-    header_html = f"""
-    <div style="text-align: center; margin-bottom: 3rem;">
-        <div class="main-header">
-            🚀 AI Stock Screener Pro
-        </div>
-        <div style="
-            font-size: 1.125rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-            margin-top: 1rem;
-            max-width: 600px;
-            margin-left: auto;
-            margin-right: auto;
-        ">
-            Powered by Advanced AI • Real-time Analysis • Professional Grade Insights
-        </div>
-    </div>
-    """
-    
-    st.html(header_html)
-
 def main():
-    """Main dashboard function with modern dark theme"""
-    # Modern header
-    show_dashboard_header()
+    """Main dashboard function"""
+    # Header
+    st.html('<div class="main-header">🚀 AI Stock Screener Pro</div>')
     
     # Status bar
-    show_modern_status_bar()
+    show_status_bar()
     
     # Load data
     df, message = load_data()
@@ -2118,29 +1504,8 @@ def main():
     
     st.success(f"✅ {message}")
     
-    # Modern sidebar with enhanced styling
-    with st.sidebar:
-        st.html("""
-        <div style="
-            text-align: center;
-            padding: 2rem 1rem;
-            background: var(--bg-tertiary);
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            border: 1px solid var(--border-primary);
-        ">
-            <div style="
-                font-size: 1.5rem;
-                font-weight: 700;
-                color: var(--text-primary);
-                margin-bottom: 0.5rem;
-            ">🎛️ Analysis Filters</div>
-            <div style="
-                font-size: 0.875rem;
-                color: var(--text-secondary);
-            ">Customize your investment analysis</div>
-        </div>
-        """)
+    # Sidebar filters
+    st.sidebar.markdown("## 🎛️ Analysis Filters")
     
     # Investment grade filter
     if 'investment_grade' in df.columns:
@@ -2175,7 +1540,7 @@ def main():
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            create_modern_summary_metrics(df)
+            create_summary_metrics(df)
         
         with col2:
             st.markdown("#### 🕒 Live Market Data")
@@ -2312,65 +1677,6 @@ def main():
             file_name=f"stock_analysis_{datetime.now().strftime('%Y%m%d')}.csv",
             mime="text/csv"
         )
-    
-    # Modern footer
-    show_modern_footer()
-
-def show_modern_footer():
-    """Display modern footer with system information"""
-    footer_html = f"""
-    <div style="
-        margin-top: 4rem;
-        padding: 2rem 0;
-        border-top: 1px solid var(--border-primary);
-        text-align: center;
-    ">
-        <div style="
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 2rem;
-            flex-wrap: wrap;
-            margin-bottom: 1rem;
-        ">
-            <div style="
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                color: var(--text-secondary);
-            ">
-                <span style="color: var(--accent-primary);">🚀</span>
-                <span>AI Stock Screener Pro</span>
-            </div>
-            <div style="
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                color: var(--text-secondary);
-            ">
-                <span style="color: var(--success);">🤖</span>
-                <span>Powered by OpenAI GPT</span>
-            </div>
-            <div style="
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                color: var(--text-secondary);
-            ">
-                <span style="color: var(--info);">📊</span>
-                <span>Real-time Analytics</span>
-            </div>
-        </div>
-        <div style="
-            color: var(--text-muted);
-            font-size: 0.875rem;
-        ">
-            Built with ❤️ for intelligent investing • Version 3.0 Dark Edition
-        </div>
-    </div>
-    """
-    
-    st.html(footer_html)
 
 if __name__ == "__main__":
     main()

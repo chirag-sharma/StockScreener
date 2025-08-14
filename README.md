@@ -1,6 +1,6 @@
 # 🚀 **Stock Screener v3.0** - Production-Ready AI Investment Analysis Platform
 
-*Enterprise-grade stock analysis with 100% complete data coverage, machine learning predictions, and professional insights*
+*Enterprise-grade stock analysis with 100% complete data coverage, machine lea   python scripts/run_ai_screener.py --config config/nifty50.propertiesning predictions, and professional insights*
 
 ---
 
@@ -84,10 +84,8 @@ python scripts/run_dashboard.py
 ### **Command Line Analysis**
 ```bash
 # Quick sector analysis  
-python scripts/run_screener.py
-
-# Custom configuration
-python scripts/run_screener.py --sector nifty_100 --min-score 7.0
+   python scripts/run_ai_screener.py# Custom configuration
+python scripts/run_ai_screener.py --sector nifty_100 --min-score 7.0
 ```
 
 A comprehensive stock screening and analysis tool with AI-powered insights, multi-period price predictions, and professional reporting for Indian equity markets.
@@ -145,7 +143,7 @@ cp .env.example .env  # Edit with your API keys
 #### 🎯 Comprehensive Analysis (Recommended)
 Full analysis with AI insights and multi-period predictions:
 ```bash
-python scripts/run_screener.py
+python scripts/run_ai_screener.py
 ```
 
 #### 📊 Multi-Period Price Predictions
@@ -159,7 +157,7 @@ python scripts/predict_prices.py --multi-period RELIANCE.NS
 All settings managed through config files:
 ```bash
 # Edit config/screener_config.properties
-python scripts/run_screener.py --config config/nifty50.properties
+python scripts/run_ai_screener.py --config config/nifty50.properties
 ```
 
 ## 📊 Advanced Features & Capabilities
@@ -474,7 +472,7 @@ torch>=1.13.0              # PyTorch for advanced ML
 
 1. **Clone & Install**: `git clone` + `pip install -r requirements.txt`
 2. **Configure**: Edit `config/screener_config.properties` with your preferences
-3. **Run Analysis**: `python scripts/run_screener.py`
+3. **Run Analysis**: `python scripts/run_ai_screener.py`
 4. **Review Results**: Open generated Excel file in `data/output/`
 5. **Iterate & Refine**: Adjust configuration and re-run for optimal results
 

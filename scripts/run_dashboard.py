@@ -44,17 +44,24 @@ def check_data_availability():
     if not output_dir.exists():
         print("❌ Output directory not found: data/output/")
         print("📋 Please run the screener first:")
-        print("   python scripts/run_screener.py")
+        print("   python scripts/run_ai_screener.py")
         return False
     
-    # Look for analysis files
+    # Look for analysis files - prioritize the latest comprehensive file
+    latest_comprehensive = output_dir / "comprehensive_analysis.xlsx"
+    if latest_comprehensive.exists():
+        print(f"✅ Found latest analysis data: {latest_comprehensive.name}")
+        return True
+    
+    # Fallback: Look for datetime-stamped files
     analysis_files = list(output_dir.glob("comprehensive_analysis_*.xlsx"))
-    analysis_files.extend(list(output_dir.glob("comprehensive_analysis.xlsx")))
     
     if not analysis_files:
         print("❌ No analysis data found!")
-        print("📋 Please run the screener first:")
-        print("   python scripts/run_screener.py")
+        print("📋 Please run an analysis first:")
+        print("   🤖 python scripts/run_ai_screener.py      # Full AI analysis")
+        print("   ⚡ python scripts/run_basic_screener.py    # Quick analysis") 
+        print("   📋 python scripts/launcher.py              # Interactive menu")
         return False
     
     latest_file = max(analysis_files, key=os.path.getmtime)
@@ -141,7 +148,7 @@ def main():
     print("2. Checking data availability...")
     if not check_data_availability():
         print("\n💡 Quick Start Guide:")
-        print("   1. Run: python scripts/run_screener.py")
+        print("   1. Run: python scripts/run_ai_screener.py")
         print("   2. Wait for analysis to complete")
         print("   3. Run: python scripts/run_dashboard.py")
         return

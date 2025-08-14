@@ -114,11 +114,11 @@ def _load_thresholds():
         'EPS_GROWTH_MIN': float(config['DEFAULT'].get('eps_growth_min', 10)),  # Minimum EPS Growth (%)
         'ROA_MIN': float(config['DEFAULT'].get('roa_min', 10)),  # Minimum Return on Assets (%)
         'NET_PROFIT_MARGIN_MIN': float(config['DEFAULT'].get('net_profit_margin_min', 10)),  # Minimum Net Profit Margin (%)
-        'OPERATING_MARGIN_MIN': float(config['DEFAULT'].get('operating_holding_min', 15)),  # Minimum Operating Margin (%)
+        'OPERATING_MARGIN_MIN': float(config['DEFAULT'].get('operating_margin_min', 15)),  # Minimum Operating Margin (%)
         'CASH_CONVERSION_MIN': float(config['DEFAULT'].get('cash_conversion_min', 1.0)),  # Minimum Cash Conversion Cycle
         'EV_EBITDA_MAX': float(config['DEFAULT'].get('ev_ebitda_max', 10)),  # Maximum EV/EBITDA Ratio
         'MARKET_CAP_MIN': float(config['DEFAULT'].get('market_cap_min', 1000)),  # Minimum Market Capitalization (in crores)
-        'PLEDGED_SHARES_MAX': float(config['DEFAULT'].get('pledge_min', 10)),  # Maximum Pledged Shares (%)
+        'PLEDGED_SHARES_MAX': float(config['DEFAULT'].get('pledged_shares_max', 10)),  # Maximum Pledged Shares (%)
         'REVENUE_GROWTH_MIN': float(config['DEFAULT'].get('revenue_growth_min', 10)),  # Minimum Revenue Growth (%)
         'DIVIDEND_YIELD_MIN': float(config['DEFAULT'].get('dividend_yield_min', 2.0)),  # Minimum Dividend Yield (%)
         'DIVIDEND_PAYOUT_MIN': float(config['DEFAULT'].get('dividend_payout_min', 40)),  # Minimum Dividend Payout Ratio (%)
