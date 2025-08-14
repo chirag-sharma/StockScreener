@@ -36,7 +36,6 @@ ehthumbs.db
 Thumbs.db
 
 # Project specific
-config/screener_config.properties
 data/output/
 src/oldScreenerDontUse.py
 dummy.py

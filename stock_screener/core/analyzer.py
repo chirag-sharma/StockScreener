@@ -792,6 +792,13 @@ class DetailedAnalyzer:
                 if "predictions" in multi_period_results:
                     main_prediction["multi_period_predictions"] = multi_period_results["predictions"]
                     main_prediction["multi_period_summary"] = multi_period_results.get("summary", {})
+                    
+                    # Debug logging to trace the bug
+                    logger.info(f"[PREDICTION DEBUG] {symbol} multi-period data transfer:")
+                    for period, data in multi_period_results["predictions"].items():
+                        if isinstance(data, dict):
+                            price = data.get('predicted_price', 'N/A')
+                            logger.info(f"[PREDICTION DEBUG]   {period}: ₹{price}")
                 
                 logger.info(f"Comprehensive price prediction for {symbol}: {main_prediction.get('predicted_price', 'N/A')} (Confidence: {main_prediction.get('confidence', 'N/A')})")
                 return main_prediction
@@ -1354,6 +1361,13 @@ IMPORTANT:
         growth_6_months = []
         growth_12_months = []
         
+        # Individual monthly prediction columns (6M-12M)
+        monthly_predictions = {}
+        monthly_growth = {}
+        for month in range(6, 13):  # 6 to 12 months
+            monthly_predictions[f'price_{month}_months'] = []
+            monthly_growth[f'growth_{month}_months'] = []
+        
         total_stocks = len(df)
         
         for idx, (_, row) in enumerate(df.iterrows(), 1):
@@ -1414,10 +1428,53 @@ IMPORTANT:
             
             # Multi-period prediction fields
             multi_period_preds = ai_result.get('multi_period_predictions', {})
+            
+            # Debug logging for multi-period predictions structure
+            if idx <= 2:
+                logger.info(f"[DEBUG {symbol}] Multi-period predictions keys: {list(multi_period_preds.keys())}")
+                if multi_period_preds:
+                    for key, value in multi_period_preds.items():
+                        if isinstance(value, dict):
+                            price = value.get('predicted_price', 'N/A')
+                            logger.info(f"[DEBUG {symbol}] {key}: ₹{price}")
+                            
+                    # Critical debug: Check if all values are the same
+                    prices = []
+                    for value in multi_period_preds.values():
+                        if isinstance(value, dict):
+                            price = value.get('predicted_price')
+                            if price is not None:
+                                prices.append(float(price))
+                    
+                    if prices:
+                        unique_prices = len(set(prices))
+                        if unique_prices == 1:
+                            logger.info(f"[DEBUG {symbol}] 🚨 ALL MULTI-PERIOD PREDICTIONS ARE IDENTICAL: ₹{prices[0]}")
+                        else:
+                            logger.info(f"[DEBUG {symbol}] ✅ Multi-period predictions vary: {unique_prices} unique values")
+            
+            # Extract 6M and 12M for legacy columns
             price_6_months.append(multi_period_preds.get('6_months', {}).get('predicted_price', 'N/A'))
             price_12_months.append(multi_period_preds.get('12_months', {}).get('predicted_price', 'N/A'))
             growth_6_months.append(multi_period_preds.get('6_months', {}).get('growth_percent', 'N/A'))
             growth_12_months.append(multi_period_preds.get('12_months', {}).get('growth_percent', 'N/A'))
+            
+            # Extract individual monthly predictions (6M-12M) - fix data structure access
+            for month in range(6, 13):
+                month_key = f'{month}_months'
+                month_data = multi_period_preds.get(month_key, {})
+                
+                # Get predicted price and growth percentage
+                predicted_price = month_data.get('predicted_price', 'N/A')
+                growth_percent = month_data.get('growth_percent', 'N/A')
+                
+                # Add to monthly collections
+                monthly_predictions[f'price_{month}_months'].append(predicted_price)
+                monthly_growth[f'growth_{month}_months'].append(growth_percent)
+                
+                # Debug logging for first stock
+                if idx <= 2:  # Debug first 2 stocks
+                    logger.info(f"[DEBUG {symbol}] Month {month}: Price=₹{predicted_price}, Growth={growth_percent}%")
             
             # Rate limiting and progress logging
             if idx < total_stocks:
@@ -1454,6 +1511,11 @@ IMPORTANT:
         df['Price Target (12M)'] = price_12_months
         df['Growth 6M (%)'] = growth_6_months
         df['Growth 12M (%)'] = growth_12_months
+        
+        # Individual Monthly Prediction Columns (6M-12M)
+        for month in range(6, 13):
+            df[f'Price Prediction {month}M (₹)'] = monthly_predictions[f'price_{month}_months']
+            df[f'Growth {month}M (%)'] = monthly_growth[f'growth_{month}_months']
         
         logger.info("Comprehensive AI analysis completed for all stocks")
         

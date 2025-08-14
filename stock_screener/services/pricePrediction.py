@@ -83,11 +83,18 @@ class PricePredictionService:
             self.data = ticker.history(period=period)
             if not self.data.empty:
                 self.current_price = self.data['Close'].iloc[-1]
-                logger.info(f"Loaded {len(self.data)} days of data for {self.symbol}")
+                # Ensure current_price is valid (not zero or NaN)
+                if pd.isna(self.current_price) or self.current_price <= 0:
+                    logger.error(f"Invalid current price for {self.symbol}: {self.current_price}")
+                    self.current_price = None
+                else:
+                    logger.info(f"Loaded {len(self.data)} days of data for {self.symbol}")
             else:
                 logger.error(f"No data available for {self.symbol}")
+                self.current_price = None
         except Exception as e:
             logger.error(f"Error loading data for {self.symbol}: {e}")
+            self.current_price = None
     
     def _load_fundamental_data(self):
         """Load fundamental data for valuation-based predictions"""
@@ -108,6 +115,9 @@ class PricePredictionService:
         """
         if self.data is None or self.data.empty:
             return {"error": "No data available for prediction"}
+        
+        if self.current_price is None or self.current_price <= 0:
+            return {"error": "Invalid current price - cannot calculate predictions"}
         
         results = {
             "symbol": self.symbol,
@@ -251,8 +261,8 @@ class PricePredictionService:
                         "average": round(np.mean(confidences), 2) if confidences else 0
                     },
                     "growth_projection": {
-                        "6_month_growth": round(((ensemble_prices[0] - self.current_price) / self.current_price * 100), 2) if ensemble_prices else 0,
-                        "12_month_growth": round(((ensemble_prices[-1] - self.current_price) / self.current_price * 100), 2) if ensemble_prices else 0
+                        "6_month_growth": round(((ensemble_prices[0] - self.current_price) / self.current_price * 100), 2) if ensemble_prices and self.current_price and self.current_price > 0 else 0,
+                        "12_month_growth": round(((ensemble_prices[-1] - self.current_price) / self.current_price * 100), 2) if ensemble_prices and self.current_price and self.current_price > 0 else 0
                     }
                 }
             else:
@@ -287,23 +297,41 @@ class PricePredictionService:
             
             # Trend analysis
             sma_trend = "Bullish" if data['Close'].iloc[-1] > data['SMA_50'].iloc[-1] else "Bearish"
-            momentum = (data['Close'].iloc[-1] - data['Close'].iloc[-5]) / data['Close'].iloc[-5] * 100
             
-            # Simple technical prediction based on trend
-            if sma_trend == "Bullish" and momentum > 2:
-                price_change = 0.05  # 5% increase
-            elif sma_trend == "Bearish" and momentum < -2:
-                price_change = -0.05  # 5% decrease
+            # Safe momentum calculation to avoid division by zero
+            close_5_days_ago = data['Close'].iloc[-5]
+            if close_5_days_ago > 0:
+                momentum = (data['Close'].iloc[-1] - close_5_days_ago) / close_5_days_ago * 100
             else:
-                price_change = momentum / 100 * 0.5  # Conservative momentum-based
+                momentum = 0
+            
+            # Data-driven technical prediction based on actual momentum and volatility
+            recent_volatility = data['Close'].pct_change().std() * 100  # Daily volatility as percentage
+            
+            if sma_trend == "Bullish" and momentum > 2:
+                # Use momentum but cap it based on historical volatility
+                price_change = min(momentum / 100 * 0.3, recent_volatility / 100 * 0.5)
+            elif sma_trend == "Bearish" and momentum < -2:
+                # Use momentum but cap it based on historical volatility  
+                price_change = max(momentum / 100 * 0.3, -recent_volatility / 100 * 0.5)
+            else:
+                # Conservative momentum-based prediction scaled by actual volatility
+                price_change = (momentum / 100) * min(0.3, recent_volatility / 100)
             
             predicted_price = self.current_price * (1 + price_change)
             
+            # Calculate confidence based on data quality and consistency
+            data_length = len(data)
+            trend_consistency = 1 - (recent_volatility / 100)  # Lower volatility = higher confidence
+            data_confidence = min(1.0, data_length / 100)  # More data = higher confidence
+            overall_confidence = (trend_consistency * 0.7) + (data_confidence * 0.3)
+            
             return {
                 "predicted_price": round(predicted_price, 2),
-                "confidence": 0.6,
+                "confidence": round(max(0.1, min(0.9, overall_confidence)), 2),
                 "trend": sma_trend,
                 "momentum": round(momentum, 2),
+                "volatility": round(recent_volatility, 2),
                 "support_level": round(support, 2),
                 "resistance_level": round(resistance, 2),
                 "method": "Technical Analysis"
@@ -322,34 +350,71 @@ class PricePredictionService:
             predictions = []
             methods_used = []
             
-            # 1. P/E based valuation
+            # 1. P/E based valuation using actual market data
             pe_ratio = self.fundamental_data.get('trailingPE')
             eps = self.fundamental_data.get('trailingEps')
-            if pe_ratio and eps:
-                # Use sector average P/E (simplified to 18 for Indian market)
-                fair_pe = 18
-                pe_based_price = eps * fair_pe
-                predictions.append(pe_based_price)
-                methods_used.append("P/E Valuation")
+            sector = self.fundamental_data.get('sector', '')
+            industry = self.fundamental_data.get('industry', '')
             
-            # 2. P/B based valuation
+            if pe_ratio and eps and pe_ratio > 0:
+                # Use the stock's own historical P/E as baseline (more accurate than fixed sector average)
+                # Apply conservative adjustment only if P/E seems excessive
+                if pe_ratio > 50:  # Only adjust if P/E is extremely high
+                    # Use industry median or conservative estimate only when necessary
+                    adjusted_pe = min(pe_ratio, 25) if sector in ['Technology', 'Healthcare'] else min(pe_ratio, 20)
+                    pe_based_price = eps * adjusted_pe
+                    methods_used.append("P/E Valuation (Adjusted)")
+                else:
+                    # Use actual P/E ratio - this is the real market valuation
+                    pe_based_price = eps * pe_ratio
+                    methods_used.append("P/E Valuation (Actual)")
+                
+                predictions.append(pe_based_price)
+            
+            # 2. P/B based valuation using actual market data
             pb_ratio = self.fundamental_data.get('priceToBook')
             book_value = self.fundamental_data.get('bookValue')
-            if pb_ratio and book_value:
-                # Use conservative P/B of 2 for fair value
-                fair_pb = 2.0
-                pb_based_price = book_value * fair_pb
+            if pb_ratio and book_value and pb_ratio > 0:
+                # Use the stock's actual P/B ratio - this reflects real market valuation
+                # Only apply conservative limits for extremely high P/B ratios
+                if pb_ratio > 10:  # Only adjust if P/B is extremely high
+                    adjusted_pb = min(pb_ratio, 5)
+                    pb_based_price = book_value * adjusted_pb
+                    methods_used.append("P/B Valuation (Adjusted)")
+                else:
+                    # Use actual P/B ratio - this is the real market assessment
+                    pb_based_price = book_value * pb_ratio
+                    methods_used.append("P/B Valuation (Actual)")
+                
                 predictions.append(pb_based_price)
-                methods_used.append("P/B Valuation")
             
-            # 3. DCF approximation (simplified)
+            # 3. DCF based on actual financial metrics
             free_cash_flow = self.fundamental_data.get('freeCashflow')
             shares_outstanding = self.fundamental_data.get('sharesOutstanding')
-            if free_cash_flow and shares_outstanding:
-                # Simplified DCF: FCF * 15 (conservative multiplier) / shares
-                dcf_price = (free_cash_flow * 15) / shares_outstanding
+            market_cap = self.fundamental_data.get('marketCap')
+            
+            if free_cash_flow and shares_outstanding and shares_outstanding > 0:
+                # Calculate current FCF yield to determine appropriate multiple
+                current_fcf_yield = free_cash_flow / market_cap if market_cap and market_cap > 0 else None
+                
+                if current_fcf_yield and current_fcf_yield > 0:
+                    # Use inverse of FCF yield as multiple (market-determined)
+                    dcf_multiple = 1 / current_fcf_yield
+                    # Cap the multiple at reasonable bounds (5-25x FCF)
+                    dcf_multiple = max(5, min(dcf_multiple, 25))
+                else:
+                    # Fallback: Use industry-standard DCF multiple based on growth and risk
+                    revenue_growth = self.fundamental_data.get('revenueGrowth', 0)
+                    if revenue_growth and revenue_growth > 0.15:  # High growth
+                        dcf_multiple = 20
+                    elif revenue_growth and revenue_growth > 0.08:  # Moderate growth
+                        dcf_multiple = 15
+                    else:  # Low growth
+                        dcf_multiple = 10
+                
+                dcf_price = (free_cash_flow * dcf_multiple) / shares_outstanding
                 predictions.append(dcf_price)
-                methods_used.append("DCF Approximation")
+                methods_used.append("DCF (Market-Based Multiple)")
             
             # 4. Graham Formula
             growth_rate = self.fundamental_data.get('earningsQuarterlyGrowth', 0) * 100
@@ -456,7 +521,10 @@ class PricePredictionService:
             future_price = best_model[1].predict(last_features)[0]
             
             # Calculate confidence based on model performance
-            confidence = max(0.3, min(0.8, 1 - (best_score ** 0.5) / self.current_price))
+            if self.current_price and self.current_price > 0:
+                confidence = max(0.3, min(0.8, 1 - (best_score ** 0.5) / self.current_price))
+            else:
+                confidence = 0.3  # Default low confidence when price is invalid
             
             return {
                 "predicted_price": round(future_price, 2),
@@ -499,7 +567,10 @@ class PricePredictionService:
             
             # Calculate confidence based on model AIC and prediction horizon
             aic = fitted_model.aic
-            base_confidence = max(0.3, min(0.7, 1000 / aic))
+            if aic and aic > 0:
+                base_confidence = max(0.3, min(0.7, 1000 / aic))
+            else:
+                base_confidence = 0.3  # Default low confidence for invalid AIC
             
             # Adjust confidence based on prediction horizon (longer periods = lower confidence)
             horizon_factor = max(0.5, 1.0 - (self.prediction_days - 30) / 1000)
@@ -524,10 +595,20 @@ class PricePredictionService:
             # Recent price pattern analysis
             recent_prices = data['Close'].tail(20).values
             
-            # Calculate trend strength
-            returns = np.diff(recent_prices) / recent_prices[:-1]
-            trend_strength = np.mean(returns)
-            volatility = np.std(returns)
+            # Calculate trend strength with safe division
+            returns = []
+            for i in range(1, len(recent_prices)):
+                if recent_prices[i-1] > 0:
+                    returns.append((recent_prices[i] - recent_prices[i-1]) / recent_prices[i-1])
+                else:
+                    returns.append(0)
+            
+            if len(returns) > 0:
+                trend_strength = np.mean(returns)
+                volatility = np.std(returns)
+            else:
+                trend_strength = 0
+                volatility = 0
             
             # Simple pattern recognition
             if trend_strength > 0.01:  # Strong uptrend

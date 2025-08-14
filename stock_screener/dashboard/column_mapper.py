@@ -48,6 +48,22 @@ COLUMN_MAPPING = {
     'Price Change % (30d)': 'price_change_30d',
     'Prediction Confidence': 'prediction_confidence',
     
+    # Month-by-month price predictions (6M to 12M)
+    'Price Prediction 6M (₹)': 'price_prediction_6m',
+    'Growth 6M (%)': 'growth_6m_monthly',  # Different from above to avoid conflicts
+    'Price Prediction 7M (₹)': 'price_prediction_7m',
+    'Growth 7M (%)': 'growth_7m',
+    'Price Prediction 8M (₹)': 'price_prediction_8m',
+    'Growth 8M (%)': 'growth_8m',
+    'Price Prediction 9M (₹)': 'price_prediction_9m',
+    'Growth 9M (%)': 'growth_9m',
+    'Price Prediction 10M (₹)': 'price_prediction_10m',
+    'Growth 10M (%)': 'growth_10m',
+    'Price Prediction 11M (₹)': 'price_prediction_11m',
+    'Growth 11M (%)': 'growth_11m',
+    'Price Prediction 12M (₹)': 'price_prediction_12m',
+    'Growth 12M (%)': 'growth_12m_monthly',  # Different from above to avoid conflicts
+    
     # Technical
     'Volume': 'volume',
     'Day High (₹)': 'day_high',

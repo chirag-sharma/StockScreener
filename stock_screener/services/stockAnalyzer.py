@@ -26,7 +26,7 @@ Usage:
 import yfinance as yf
 import time
 from datetime import datetime
-from stock_screener.core.constants import THRESHOLDS
+from stock_screener.core.constants import LEGACY_THRESHOLDS as THRESHOLDS
 from stock_screener.utils.logging_config import get_logger, log_execution_start, log_execution_end
 
 # Initialize module logger
@@ -180,6 +180,7 @@ class StockAnalyzer:
         except Exception as e:
             logger.error(f"Error calculating derived metrics: {e}")
         
+        return derived
     
     def analyze(self):
         """
@@ -236,25 +237,57 @@ class StockAnalyzer:
             def calculate_interest_coverage():
                 """Calculate Interest Coverage Ratio safely"""
                 ebitda = self._safe_get('ebitda', float)
-                interest_expense = self._safe_get('totalInterestExpense', float, 1)  # Default to 1 to avoid division by zero
+                interest_expense = self._safe_get('totalInterestExpense', float)
                 
-                if ebitda is not None and interest_expense and interest_expense != 0:
+                if ebitda is not None and interest_expense and interest_expense > 0:
                     return ebitda / interest_expense
+                elif ebitda is not None and (interest_expense is None or interest_expense == 0):
+                    # Company has EBITDA but no interest expense - return high coverage
+                    return 999  # Indicates very strong interest coverage (debt-free or minimal debt)
                 return None
 
             def calculate_cash_conversion():
                 """Calculate Cash Conversion Ratio safely"""
                 free_cash_flow = self._safe_get('freeCashflow', float)
-                net_income = self._safe_get('netIncome', float, 1)  # Default to 1 to avoid division by zero
+                net_income = self._safe_get('netIncome', float)
                 
+                if free_cash_flow is not None and net_income and net_income > 0:
+                    return free_cash_flow / net_income
+                elif free_cash_flow is not None and (net_income is None or net_income <= 0):
+                    # Company has FCF but no/negative net income - return None (cannot calculate meaningful ratio)
+                    return None
+                return None
                 if free_cash_flow is not None and net_income and net_income != 0:
                     return free_cash_flow / net_income
                 return None
+
+            # Helper function to get current price
+            def get_current_price():
+                """Get current market price from various yfinance fields"""
+                # Try different fields for current price in order of preference
+                current_price = (self._safe_get('regularMarketPrice', float) or
+                               self._safe_get('currentPrice', float) or
+                               self._safe_get('previousClose', float) or
+                               self._safe_get('open', float))
+                
+                if current_price is None:
+                    # As fallback, try to get latest close price from history
+                    try:
+                        stock = yf.Ticker(self.symbol)
+                        hist = stock.history(period="1d")
+                        if not hist.empty:
+                            current_price = hist['Close'].iloc[-1]
+                    except Exception as e:
+                        logger.debug(f"Could not fetch historical price for {self.symbol}: {e}")
+                        current_price = None
+                
+                return current_price
 
             # Collect key financial metrics
             self.analysis = {
                 'Symbol': self.symbol,
                 'Company Name': self._safe_get('longName', str, 'N/A'),
+                'Current Price (₹)': get_current_price(),
                 'PE Ratio': self._safe_get('trailingPE', float),
                 'Debt/Equity': self._safe_get('debtToEquity', float),
                 'ROE': self._safe_get('returnOnEquity', lambda x: float(x) * 100),
@@ -343,7 +376,7 @@ class StockAnalyzer:
             
             # Count total passes for summary
             total_checks = len(threshold_evaluations)
-            passed_checks = sum(1 for v in threshold_evaluations if self.analysis.get(f"{v} Pass", False))
+            passed_checks = sum(1 for pass_key in threshold_evaluations.keys() if self.analysis.get(pass_key, False))
             
             self.analysis['Threshold Summary'] = f"{passed_checks}/{total_checks} checks passed"
             logger.debug(f"Threshold evaluation completed: {self.analysis['Threshold Summary']}")

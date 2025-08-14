@@ -200,6 +200,57 @@ class ExcelExporter:
                 'acceptable': (4, 6),
                 'poor': (2, 4),
                 'bad': (0, 2)
+            },
+            
+            # Monthly Growth Predictions (Higher is Better)
+            'Growth 6M (%)': {
+                'excellent': (15, float('inf')),
+                'good': (8, 15),
+                'acceptable': (3, 8),
+                'poor': (0, 3),
+                'bad': (-float('inf'), 0)
+            },
+            'Growth 7M (%)': {
+                'excellent': (15, float('inf')),
+                'good': (8, 15),
+                'acceptable': (3, 8),
+                'poor': (0, 3),
+                'bad': (-float('inf'), 0)
+            },
+            'Growth 8M (%)': {
+                'excellent': (15, float('inf')),
+                'good': (8, 15),
+                'acceptable': (3, 8),
+                'poor': (0, 3),
+                'bad': (-float('inf'), 0)
+            },
+            'Growth 9M (%)': {
+                'excellent': (15, float('inf')),
+                'good': (8, 15),
+                'acceptable': (3, 8),
+                'poor': (0, 3),
+                'bad': (-float('inf'), 0)
+            },
+            'Growth 10M (%)': {
+                'excellent': (15, float('inf')),
+                'good': (8, 15),
+                'acceptable': (3, 8),
+                'poor': (0, 3),
+                'bad': (-float('inf'), 0)
+            },
+            'Growth 11M (%)': {
+                'excellent': (15, float('inf')),
+                'good': (8, 15),
+                'acceptable': (3, 8),
+                'poor': (0, 3),
+                'bad': (-float('inf'), 0)
+            },
+            'Growth 12M (%)': {
+                'excellent': (15, float('inf')),
+                'good': (8, 15),
+                'acceptable': (3, 8),
+                'poor': (0, 3),
+                'bad': (-float('inf'), 0)
             }
         }
     

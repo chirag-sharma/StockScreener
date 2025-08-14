@@ -1,7 +1,24 @@
 #!/usr/bin/env python3
 """
-Enhanced Price Prediction with Consistency Controls
+Price Prediction Stability Analysis Tool
+========================================
+
+Development and QA tool for testing prediction model consistency.
+
+Features:
+- Tests prediction stability across multiple runs
+- Analyzes variation in price predictions and confidence scores  
+- Identifies sources of prediction inconsistency
+- Provides recommendations for model improvement
+
+Usage: python scripts/analyze_stability.py
 """
+
+import sys
+from pathlib import Path
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from stock_screener.services.pricePrediction import PricePredictionService
 import pandas as pd
