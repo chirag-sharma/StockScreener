@@ -1,217 +1,474 @@
+#!/usr/bin/env python3
 """
-This module provides the StockAnalyzer class for fetching and analyzing stock data using yfinance.
-It applies financial thresholds and returns a structured analysis result.
+Stock Analysis Service Module
+=============================
+
+This module provides the StockAnalyzer class for fetching and analyzing stock data 
+using yfinance. It applies financial thresholds and returns structured analysis results
+with comprehensive error handling and logging.
+
+Features:
+- Stock data fetching with yfinance integration
+- Financial threshold evaluation
+- Comprehensive error handling and validation
+- Structured analysis result generation
+- Performance metrics calculation
+- Detailed logging for debugging
+
+Usage:
+    from stock_screener.services.stockAnalyzer import StockAnalyzer
+    
+    analyzer = StockAnalyzer('RELIANCE.NS')
+    analyzer.fetch_data()
+    result = analyzer.analyze()
 """
+
 import yfinance as yf
+import time
+from datetime import datetime
 from stock_screener.core.constants import THRESHOLDS
-import logging
+from stock_screener.utils.logging_config import get_logger, log_execution_start, log_execution_end
+
+# Initialize module logger
+logger = get_logger(__name__)
+
 
 class StockAnalyzer:
     """
     Analyzes a stock's financial data and evaluates it against predefined thresholds.
+    
+    This class provides comprehensive stock analysis functionality including:
+    - Data fetching from yfinance
+    - Financial metric calculation
+    - Threshold comparison
+    - Result structuring and validation
     """
+    
     def __init__(self, symbol):
         """
         Initialize the analyzer with a stock symbol.
+        
         Args:
-            symbol (str): The stock ticker symbol.
+            symbol (str): The stock ticker symbol (e.g., 'RELIANCE.NS', 'TCS.NS')
         """
-        self.symbol = symbol
+        self.symbol = symbol.strip().upper()
         self.info = {}
         self.analysis = {}
-
+        self._fetch_timestamp = None
+        
+        logger.debug(f"StockAnalyzer initialized for symbol: {self.symbol}")
+    
+    def _validate_symbol(self):
+        """
+        Validate the stock symbol format.
+        
+        Returns:
+            bool: True if symbol appears valid, False otherwise
+        """
+        if not self.symbol:
+            logger.error("Empty symbol provided")
+            return False
+        
+        if len(self.symbol) < 2:
+            logger.error(f"Symbol too short: {self.symbol}")
+            return False
+        
+        return True
+    
     def fetch_data(self):
         """
         Fetch stock data using yfinance and store it in self.info.
-        Logs an error if data cannot be fetched.
+        
+        This method fetches comprehensive stock information including:
+        - Basic company information
+        - Financial metrics and ratios
+        - Market data and pricing
+        - Historical performance indicators
+        
+        Returns:
+            bool: True if data was successfully fetched, False otherwise
         """
+        if not self._validate_symbol():
+            return False
+        
+        start_time = time.time()
+        log_execution_start(__name__, "fetch_data", symbol=self.symbol)
+        
         try:
+            logger.info(f"Fetching data for symbol: {self.symbol}")
+            
             stock = yf.Ticker(self.symbol)
             self.info = stock.info
+            self._fetch_timestamp = datetime.now()
+            
+            if not self.info:
+                logger.warning(f"No data returned for symbol: {self.symbol}")
+                return False
+            
+            # Log key information about fetched data
+            company_name = self.info.get('longName', 'Unknown')
+            market_cap = self.info.get('marketCap', 'N/A')
+            
+            logger.info(f"Data fetched successfully - Company: {company_name}, Market Cap: {market_cap}")
+            logger.debug(f"Data fields available: {len(self.info)} fields")
+            
+            duration = time.time() - start_time
+            log_execution_end(__name__, "fetch_data", duration, f"Success: {company_name}")
+            
+            return True
+            
         except Exception as e:
-            logging.error(f"Failed to fetch data for {self.symbol}: {e}")
+            duration = time.time() - start_time
+            logger.error(f"Failed to fetch data for {self.symbol}: {e}")
+            log_execution_end(__name__, "fetch_data", duration, f"Failed: {str(e)}")
             self.info = {}
-
+            return False
+    
+    def _safe_get(self, key, transform=None, default=None):
+        """
+        Safely extract a value from stock info with optional transformation.
+        
+        Args:
+            key (str): The key to extract from self.info
+            transform (callable): Optional function to transform the value
+            default: Default value if key is missing or transformation fails
+            
+        Returns:
+            The extracted and optionally transformed value, or default
+        """
+        try:
+            value = self.info.get(key, default)
+            
+            if value is None:
+                return default
+            
+            if transform:
+                return transform(value)
+            
+            return value
+            
+        except Exception as e:
+            logger.debug(f"Error extracting/transforming {key}: {e}")
+            return default
+    
+    def _calculate_derived_metrics(self):
+        """
+        Calculate derived financial metrics from base data.
+        
+        Returns:
+            dict: Dictionary of calculated metrics
+        """
+        derived = {}
+        
+        try:
+            # Calculate additional ratios and metrics
+            total_debt = self._safe_get('totalDebt', float, 0)
+            total_equity = self._safe_get('totalStockholderEquity', float, 0)
+            
+            if total_equity and total_equity != 0:
+                derived['debt_to_equity_calculated'] = total_debt / total_equity
+            
+            # Free cash flow yield calculation
+            free_cash_flow = self._safe_get('freeCashflow', float, 0)
+            market_cap = self._safe_get('marketCap', float, 0)
+            
+            if market_cap and market_cap != 0:
+                derived['fcf_yield'] = (free_cash_flow / market_cap) * 100
+            
+            logger.debug(f"Calculated {len(derived)} derived metrics")
+            
+        except Exception as e:
+            logger.error(f"Error calculating derived metrics: {e}")
+        
+    
     def analyze(self):
         """
-        Analyze the fetched stock data and return a dictionary of metrics.
-        Returns None if no data is available.
+        Analyze the fetched stock data and return a comprehensive dictionary of metrics.
+        
+        This method performs complete financial analysis including:
+        - Basic financial metrics calculation
+        - Threshold comparison and pass/fail evaluation
+        - Derived metrics calculation
+        - Weighted value investing score
+        - Investment recommendation generation
+        
+        Returns:
+            dict: Comprehensive analysis results, or None if no data is available.
         """
         if not self.info:
+            logger.warning(f"No data available for analysis of symbol: {self.symbol}")
             return None
-
-        def safe_get(key, transform=None):
-            val = self.info.get(key)
-            if val is not None and transform:
-                try:
-                    return transform(val)
-                except Exception as e:
-                    logging.error(f"Error transforming {key}: {e}")
-                    return None
-            return val
-
-        def calculate_price_to_cash_flow():
-            """Calculate Price to Cash Flow ratio using Market Cap and Operating Cash Flow"""
-            market_cap = safe_get('marketCap')
-            revenue = safe_get('totalRevenue')
-            op_margin = safe_get('operatingMargins')
-
-            if all(v is not None for v in [market_cap, revenue, op_margin]):
-                operating_cash_flow = revenue * op_margin
-                if operating_cash_flow > 0:  # Avoid division by zero or negative values
-                    return market_cap / operating_cash_flow
-            return None
-
-        def calculate_net_profit_margin():
-            """Calculate Net Profit Margin with fallback options"""
-            # First try using profitMargins directly
-            profit_margins = safe_get('profitMargins')
-            if profit_margins is not None:
-                return profit_margins * 100
-
-            # Fallback to calculation from raw numbers
-            net_income = safe_get('netIncomeToCommon')
-            revenue = safe_get('totalRevenue')
-            if net_income is not None and revenue is not None and revenue != 0:
-                return (net_income / revenue) * 100
-            return None
-
-        # Collect key financial metrics
-        self.analysis = {
-            'Symbol': self.symbol,
-            'PE Ratio': safe_get('trailingPE'),
-            'Debt/Equity': safe_get('debtToEquity'),
-            'ROE': safe_get('returnOnEquity', lambda x: x * 100),
-            'Current Ratio': safe_get('currentRatio'),
-            'Price to Book': safe_get('priceToBook'),
-            'Promoter Holding': safe_get('heldPercentInsiders', lambda x: x * 100),
-            'Price to Cash Flow': calculate_price_to_cash_flow(),
-            'Quick Ratio': safe_get('quickRatio'),
-            'Interest Coverage Ratio': safe_get('ebitda', lambda x: x / self.info.get('totalInterestExpense', 1)),
-            'Free Cash Flow': safe_get('freeCashflow'),
-            'EPS Growth (%)': safe_get('earningsQuarterlyGrowth', lambda x: x * 100),
-            'Return on Assets (ROA)': safe_get('returnOnAssets', lambda x: x * 100),
-            'Net Profit Margin': calculate_net_profit_margin(),
-            'Operating Margin': safe_get('operatingMargins', lambda x: x * 100),
-            'Cash Conversion Ratio': safe_get('freeCashflow', lambda x: x / self.info.get('netIncome', 1)),
-            'Pledged Shares (%)': None,  # Not available in yfinance
-            'EV/EBITDA': safe_get('enterpriseToEbitda'),
-            'Revenue Growth (%)': safe_get('revenueGrowth', lambda x: x * 100)
-        }
-
-        # Log calculations for debugging
-        logging.info(f"\nCalculated metrics for {self.symbol}:")
-        if self.analysis['Price to Cash Flow'] is not None:
-            logging.info(f"Price to Cash Flow: {self.analysis['Price to Cash Flow']:.2f}")
-        if self.analysis['Net Profit Margin'] is not None:
-            logging.info(f"Net Profit Margin: {self.analysis['Net Profit Margin']:.2f}%")
-
-        # Apply thresholds from constants
-        self.analysis['PE Ratio Pass'] = self._check('PE Ratio', '<', THRESHOLDS['pe_ratio_max'])
-        self.analysis['Debt/Equity Pass'] = self._check('Debt/Equity', '<', THRESHOLDS['debt_to_equity_max'])
-        self.analysis['ROE Pass'] = self._check('ROE', '>', THRESHOLDS['roe_min'])
-        self.analysis['Current Ratio Pass'] = self._check('Current Ratio', '>', THRESHOLDS['current_ratio_min'])
-        self.analysis['Price to Book Pass'] = self._check('Price to Book', '<', THRESHOLDS['price_to_book_max'])
-        self.analysis['Promoter Holding Pass'] = self._check('Promoter Holding', '>', THRESHOLDS['promoter_holding_min'])
-        self.analysis['Price to Cash Flow Pass'] = self._check('Price to Cash Flow', '<', THRESHOLDS['price_to_cash_flow_max'])
-        self.analysis['Quick Ratio Pass'] = self._check('Quick Ratio', '>', THRESHOLDS['quick_ratio_min'])
-        self.analysis['Interest Coverage Ratio Pass'] = self._check('Interest Coverage Ratio', '>', THRESHOLDS['interest_coverage_min'])
-        self.analysis['Free Cash Flow Pass'] = self._check('Free Cash Flow', '>', THRESHOLDS['free_cash_flow_min'])
-        self.analysis['EPS Growth (%) Pass'] = self._check('EPS Growth (%)', '>', THRESHOLDS['eps_growth_min'])
-        self.analysis['Return on Assets (ROA) Pass'] = self._check('Return on Assets (ROA)', '>', THRESHOLDS['roa_min'])
-        self.analysis['Net Profit Margin Pass'] = self._check('Net Profit Margin', '>', THRESHOLDS['net_profit_margin_min'])
-        self.analysis['Operating Margin Pass'] = self._check('Operating Margin', '>', THRESHOLDS['operating_margin_min'])
-        self.analysis['Cash Conversion Ratio Pass'] = self._check('Cash Conversion Ratio', '>', THRESHOLDS['cash_conversion_min'])
-        self.analysis['Pledged Shares Pass'] = self._check('Pledged Shares (%)', '<', THRESHOLDS['pledged_shares_max'])
-        self.analysis['EV/EBITDA Pass'] = self._check('EV/EBITDA', '<', THRESHOLDS['ev_ebitda_max'])
-        self.analysis['Revenue Growth (%) Pass'] = self._check('Revenue Growth (%)', '>', THRESHOLDS['revenue_growth_min'])
-
-        # Calculate margin of safety
-        free_cash_flow = self.info.get('freeCashflow')
-        market_value = self.info.get('marketCap')
-
-        if free_cash_flow and market_value and market_value != 0:
-            intrinsic_value = free_cash_flow * 10  # Simple 10x FCF estimate
-            mos = (intrinsic_value - market_value) / market_value * 100
-            self.analysis['Margin of Safety (%)'] = round(mos, 2)
-        else:
-            self.analysis['Margin of Safety (%)'] = 'N/A'
-
-        # Calculate weighted value investing score
-        self.analysis['Value Score'] = self._calculate_weighted_score()
         
-        # Overall investment suggestion based on weighted score
-        score = self.analysis['Value Score']
-        if score >= 90:
-            self.analysis['Investment Recommendation'] = 'Strong Buy'
-        elif score >= 70:
-            self.analysis['Investment Recommendation'] = 'Buy'
-        elif score >= 50:
-            self.analysis['Investment Recommendation'] = 'Hold'
-        elif score >= 30:
-            self.analysis['Investment Recommendation'] = 'Weak Hold'
-        else:
-            self.analysis['Investment Recommendation'] = 'Avoid'
+        start_time = time.time()
+        log_execution_start(__name__, "analyze", symbol=self.symbol)
+        
+        try:
+            # Calculate derived metrics
+            derived_metrics = self._calculate_derived_metrics()
+            
+            # Helper functions for complex calculations
+            def calculate_price_to_cash_flow():
+                """Calculate Price to Cash Flow ratio using Market Cap and Operating Cash Flow"""
+                market_cap = self._safe_get('marketCap', float)
+                revenue = self._safe_get('totalRevenue', float)
+                op_margin = self._safe_get('operatingMargins', float)
 
-        return self.analysis
+                if all(v is not None for v in [market_cap, revenue, op_margin]):
+                    operating_cash_flow = revenue * op_margin
+                    if operating_cash_flow > 0:  # Avoid division by zero or negative values
+                        return market_cap / operating_cash_flow
+                return None
+
+            def calculate_net_profit_margin():
+                """Calculate Net Profit Margin with fallback options"""
+                # First try using profitMargins directly
+                profit_margins = self._safe_get('profitMargins', float)
+                if profit_margins is not None:
+                    return profit_margins * 100
+
+                # Fallback to calculation from raw numbers
+                net_income = self._safe_get('netIncomeToCommon', float)
+                revenue = self._safe_get('totalRevenue', float)
+                if net_income is not None and revenue is not None and revenue != 0:
+                    return (net_income / revenue) * 100
+                return None
+
+            def calculate_interest_coverage():
+                """Calculate Interest Coverage Ratio safely"""
+                ebitda = self._safe_get('ebitda', float)
+                interest_expense = self._safe_get('totalInterestExpense', float, 1)  # Default to 1 to avoid division by zero
+                
+                if ebitda is not None and interest_expense and interest_expense != 0:
+                    return ebitda / interest_expense
+                return None
+
+            def calculate_cash_conversion():
+                """Calculate Cash Conversion Ratio safely"""
+                free_cash_flow = self._safe_get('freeCashflow', float)
+                net_income = self._safe_get('netIncome', float, 1)  # Default to 1 to avoid division by zero
+                
+                if free_cash_flow is not None and net_income and net_income != 0:
+                    return free_cash_flow / net_income
+                return None
+
+            # Collect key financial metrics
+            self.analysis = {
+                'Symbol': self.symbol,
+                'Company Name': self._safe_get('longName', str, 'N/A'),
+                'PE Ratio': self._safe_get('trailingPE', float),
+                'Debt/Equity': self._safe_get('debtToEquity', float),
+                'ROE': self._safe_get('returnOnEquity', lambda x: float(x) * 100),
+                'Current Ratio': self._safe_get('currentRatio', float),
+                'Price to Book': self._safe_get('priceToBook', float),
+                'Promoter Holding': self._safe_get('heldPercentInsiders', lambda x: float(x) * 100),
+                'Price to Cash Flow': calculate_price_to_cash_flow(),
+                'Quick Ratio': self._safe_get('quickRatio', float),
+                'Interest Coverage Ratio': calculate_interest_coverage(),
+                'Free Cash Flow': self._safe_get('freeCashflow', float),
+                'EPS Growth (%)': self._safe_get('earningsQuarterlyGrowth', lambda x: float(x) * 100),
+                'Return on Assets (ROA)': self._safe_get('returnOnAssets', lambda x: float(x) * 100),
+                'Net Profit Margin': calculate_net_profit_margin(),
+                'Operating Margin': self._safe_get('operatingMargins', lambda x: float(x) * 100),
+                'Cash Conversion Ratio': calculate_cash_conversion(),
+                'Pledged Shares (%)': None,  # Not available in yfinance
+                'EV/EBITDA': self._safe_get('enterpriseToEbitda', float),
+                'Revenue Growth (%)': self._safe_get('revenueGrowth', lambda x: float(x) * 100),
+                'Market Cap': self._safe_get('marketCap', float),
+                'Sector': self._safe_get('sector', str, 'N/A'),
+                'Industry': self._safe_get('industry', str, 'N/A'),
+            }
+
+            # Add derived metrics to analysis
+            self.analysis.update(derived_metrics)
+
+            # Log key calculations for debugging
+            logger.debug(f"Key metrics calculated for {self.symbol}:")
+            if self.analysis['Price to Cash Flow'] is not None:
+                logger.debug(f"  Price to Cash Flow: {self.analysis['Price to Cash Flow']:.2f}")
+            if self.analysis['Net Profit Margin'] is not None:
+                logger.debug(f"  Net Profit Margin: {self.analysis['Net Profit Margin']:.2f}%")
+
+            # Apply thresholds and generate pass/fail results
+            self._evaluate_thresholds()
+            
+            # Calculate margin of safety
+            self._calculate_margin_of_safety()
+            
+            # Calculate weighted value investing score
+            self.analysis['Value Score'] = self._calculate_weighted_score()
+            
+            # Generate investment recommendation
+            self._generate_recommendation()
+
+            duration = time.time() - start_time
+            score = self.analysis.get('Value Score', 0)
+            recommendation = self.analysis.get('Investment Recommendation', 'Unknown')
+            log_execution_end(__name__, "analyze", duration, f"Score: {score}, Rec: {recommendation}")
+
+            return self.analysis
+            
+        except Exception as e:
+            duration = time.time() - start_time
+            logger.error(f"Analysis failed for {self.symbol}: {e}")
+            log_execution_end(__name__, "analyze", duration, f"Failed: {str(e)}")
+            return None
+    
+    def _evaluate_thresholds(self):
+        """Apply financial thresholds and generate pass/fail evaluations."""
+        try:
+            # Apply thresholds from constants
+            threshold_evaluations = {
+                'PE Ratio Pass': ('PE Ratio', '<', THRESHOLDS['pe_ratio_max']),
+                'Debt/Equity Pass': ('Debt/Equity', '<', THRESHOLDS['debt_to_equity_max']),
+                'ROE Pass': ('ROE', '>', THRESHOLDS['roe_min']),
+                'Current Ratio Pass': ('Current Ratio', '>', THRESHOLDS['current_ratio_min']),
+                'Price to Book Pass': ('Price to Book', '<', THRESHOLDS['price_to_book_max']),
+                'Promoter Holding Pass': ('Promoter Holding', '>', THRESHOLDS['promoter_holding_min']),
+                'Price to Cash Flow Pass': ('Price to Cash Flow', '<', THRESHOLDS['price_to_cash_flow_max']),
+                'Quick Ratio Pass': ('Quick Ratio', '>', THRESHOLDS['quick_ratio_min']),
+                'Interest Coverage Ratio Pass': ('Interest Coverage Ratio', '>', THRESHOLDS['interest_coverage_min']),
+                'Free Cash Flow Pass': ('Free Cash Flow', '>', THRESHOLDS['free_cash_flow_min']),
+                'EPS Growth (%) Pass': ('EPS Growth (%)', '>', THRESHOLDS['eps_growth_min']),
+                'Return on Assets (ROA) Pass': ('Return on Assets (ROA)', '>', THRESHOLDS['roa_min']),
+                'Net Profit Margin Pass': ('Net Profit Margin', '>', THRESHOLDS['net_profit_margin_min']),
+                'Operating Margin Pass': ('Operating Margin', '>', THRESHOLDS['operating_margin_min']),
+                'Cash Conversion Ratio Pass': ('Cash Conversion Ratio', '>', THRESHOLDS['cash_conversion_min']),
+                'Pledged Shares Pass': ('Pledged Shares (%)', '<', THRESHOLDS['pledged_shares_max']),
+                'EV/EBITDA Pass': ('EV/EBITDA', '<', THRESHOLDS['ev_ebitda_max']),
+                'Revenue Growth (%) Pass': ('Revenue Growth (%)', '>', THRESHOLDS['revenue_growth_min']),
+            }
+
+            for pass_key, (metric_key, condition, threshold) in threshold_evaluations.items():
+                self.analysis[pass_key] = self._check_threshold(metric_key, condition, threshold)
+            
+            # Count total passes for summary
+            total_checks = len(threshold_evaluations)
+            passed_checks = sum(1 for v in threshold_evaluations if self.analysis.get(f"{v} Pass", False))
+            
+            self.analysis['Threshold Summary'] = f"{passed_checks}/{total_checks} checks passed"
+            logger.debug(f"Threshold evaluation completed: {self.analysis['Threshold Summary']}")
+            
+        except Exception as e:
+            logger.error(f"Error evaluating thresholds: {e}")
+    
+    def _calculate_margin_of_safety(self):
+        """Calculate margin of safety based on intrinsic value estimation."""
+        try:
+            free_cash_flow = self.analysis.get('Free Cash Flow')
+            market_value = self.analysis.get('Market Cap')
+
+            if free_cash_flow and market_value and market_value != 0:
+                # Simple 10x FCF estimate for intrinsic value
+                intrinsic_value = free_cash_flow * 10
+                mos = (intrinsic_value - market_value) / market_value * 100
+                self.analysis['Margin of Safety (%)'] = round(mos, 2)
+                logger.debug(f"Margin of Safety calculated: {mos:.2f}%")
+            else:
+                self.analysis['Margin of Safety (%)'] = 'N/A'
+                logger.debug("Insufficient data for Margin of Safety calculation")
+                
+        except Exception as e:
+            logger.error(f"Error calculating margin of safety: {e}")
+            self.analysis['Margin of Safety (%)'] = 'N/A'
+    
+    def _generate_recommendation(self):
+        """Generate investment recommendation based on weighted score."""
+        try:
+            score = self.analysis.get('Value Score', 0)
+            
+            if score >= 90:
+                recommendation = 'Strong Buy'
+            elif score >= 70:
+                recommendation = 'Buy'
+            elif score >= 50:
+                recommendation = 'Hold'
+            elif score >= 30:
+                recommendation = 'Weak Hold'
+            else:
+                recommendation = 'Avoid'
+            
+            self.analysis['Investment Recommendation'] = recommendation
+            logger.debug(f"Investment recommendation generated: {recommendation} (Score: {score})")
+            
+        except Exception as e:
+            logger.error(f"Error generating recommendation: {e}")
+            self.analysis['Investment Recommendation'] = 'Unknown'
 
     def _calculate_weighted_score(self):
         """
         Calculate weighted value investing score based on fundamental principles.
-        Returns a score between 0-100 based on weighted criteria.
+        
+        This method assigns weights to different financial metrics based on
+        value investing principles and calculates a comprehensive score.
+        
+        Returns:
+            float: Weighted score between 0-100 based on weighted criteria.
         """
-        # Define weights for each metric based on value investing principles
-        weights = {
-            # Core Value Metrics (40% total)
-            'PE Ratio': 15.0,
-            'Price to Book': 10.0, 
-            'EV/EBITDA': 10.0,
-            'Margin of Safety (%)': 5.0,
+        try:
+            # Define weights for each metric based on value investing principles
+            weights = {
+                # Core Value Metrics (40% total)
+                'PE Ratio': 15.0,
+                'Price to Book': 10.0, 
+                'EV/EBITDA': 10.0,
+                'Margin of Safety (%)': 5.0,
+                
+                # Profitability & Quality (30% total)
+                'ROE': 10.0,
+                'Net Profit Margin': 8.0,
+                'Operating Margin': 7.0,
+                'Return on Assets (ROA)': 5.0,
+                
+                # Financial Strength (20% total)
+                'Current Ratio': 6.0,
+                'Debt/Equity': 6.0,
+                'Quick Ratio': 4.0,
+                'Interest Coverage Ratio': 4.0,
+                
+                # Growth & Cash Generation (10% total)
+                'Free Cash Flow': 4.0,
+                'EPS Growth (%)': 3.0,
+                'Revenue Growth (%)': 3.0,
+                
+                # Additional Metrics (Remaining weight)
+                'Price to Cash Flow': 2.5,
+                'Promoter Holding': 2.0,
+                'Cash Conversion Ratio': 1.5
+            }
             
-            # Profitability & Quality (30% total)
-            'ROE': 10.0,
-            'Net Profit Margin': 8.0,
-            'Operating Margin': 7.0,
-            'Return on Assets (ROA)': 5.0,
+            total_score = 0.0
+            total_applicable_weight = 0.0
             
-            # Financial Strength (20% total)
-            'Current Ratio': 6.0,
-            'Debt/Equity': 6.0,
-            'Quick Ratio': 4.0,
-            'Interest Coverage Ratio': 4.0,
+            for metric, weight in weights.items():
+                value = self.analysis.get(metric)
+                if value is not None and value != 'N/A':
+                    metric_score = self._score_metric(metric, value)
+                    total_score += metric_score * weight
+                    total_applicable_weight += weight
             
-            # Growth & Cash Generation (10% total)
-            'Free Cash Flow': 4.0,
-            'EPS Growth (%)': 3.0,
-            'Revenue Growth (%)': 3.0,
-            
-            # Additional Metrics (Remaining weight)
-            'Price to Cash Flow': 2.5,
-            'Promoter Holding': 2.0,
-            'Cash Conversion Ratio': 1.5
-        }
-        
-        total_score = 0.0
-        total_applicable_weight = 0.0
-        
-        for metric, weight in weights.items():
-            value = self.analysis.get(metric)
-            if value is not None and value != 'N/A':
-                metric_score = self._score_metric(metric, value)
-                total_score += metric_score * weight
-                total_applicable_weight += weight
-        
-        # Calculate final weighted average score
-        if total_applicable_weight > 0:
-            final_score = total_score / total_applicable_weight
-            return round(final_score, 1)
-        else:
+            # Calculate final weighted average score
+            if total_applicable_weight > 0:
+                final_score = total_score / total_applicable_weight
+                logger.debug(f"Weighted score calculated: {final_score:.1f} (from {total_applicable_weight:.1f} total weight)")
+                return round(final_score, 1)
+            else:
+                logger.warning("No applicable metrics for scoring")
+                return 0.0
+                
+        except Exception as e:
+            logger.error(f"Error calculating weighted score: {e}")
             return 0.0
     
     def _score_metric(self, metric, value):
         """
         Score individual metrics on a 0-100 scale based on value investing criteria.
-        Higher scores indicate better value/quality.
+        
+        Args:
+            metric (str): Name of the financial metric
+            value: Value of the metric (numeric or string)
+            
+        Returns:
+            float: Score between 0-100, higher scores indicate better value/quality
         """
         # Handle string values
         if isinstance(value, str):
@@ -220,9 +477,10 @@ class StockAnalyzer:
         try:
             value = float(value)
         except (ValueError, TypeError):
+            logger.debug(f"Could not convert {metric} value to float: {value}")
             return 0.0
         
-        # Scoring logic for each metric
+        # Scoring logic for each metric based on value investing principles
         if metric == 'PE Ratio':
             if value <= 0: return 0.0
             if value <= 10: return 100.0
@@ -332,14 +590,63 @@ class StockAnalyzer:
             return 0.0
             
         # Default scoring for unknown metrics
+        logger.debug(f"Using default scoring for unknown metric: {metric}")
         return 50.0
 
-    def _check(self, key, condition, threshold):
-        val = self.analysis.get(key)
-        if val is None:
+    def _check_threshold(self, key, condition, threshold):
+        """
+        Check if a metric passes a given threshold condition.
+        
+        Args:
+            key (str): Metric key to check
+            condition (str): Condition ('>' or '<')
+            threshold (float): Threshold value
+            
+        Returns:
+            bool: True if metric passes threshold, False otherwise
+        """
+        value = self.analysis.get(key)
+        if value is None or value == 'N/A':
             return False
-        if condition == '<':
-            return val < threshold
-        if condition == '>':
-            return val > threshold
-        return False
+        
+        try:
+            value = float(value)
+            if condition == '<':
+                return value < threshold
+            elif condition == '>':
+                return value > threshold
+            else:
+                logger.error(f"Unknown condition: {condition}")
+                return False
+        except (ValueError, TypeError):
+            logger.debug(f"Could not convert {key} value to float for threshold check: {value}")
+            return False
+    
+    def get_analysis_summary(self):
+        """
+        Get a summary of the analysis results.
+        
+        Returns:
+            dict: Summary of key analysis metrics
+        """
+        if not self.analysis:
+            return {"error": "No analysis available"}
+        
+        return {
+            'symbol': self.analysis.get('Symbol'),
+            'company_name': self.analysis.get('Company Name'),
+            'value_score': self.analysis.get('Value Score'),
+            'recommendation': self.analysis.get('Investment Recommendation'),
+            'pe_ratio': self.analysis.get('PE Ratio'),
+            'roe': self.analysis.get('ROE'),
+            'debt_equity': self.analysis.get('Debt/Equity'),
+            'margin_of_safety': self.analysis.get('Margin of Safety (%)'),
+            'threshold_summary': self.analysis.get('Threshold Summary'),
+            'sector': self.analysis.get('Sector'),
+            'market_cap': self.analysis.get('Market Cap')
+        }
+
+
+# Module initialization
+logger.info("Stock Analyzer module initialized")
+logger.debug(f"Available thresholds: {list(THRESHOLDS.keys())}")

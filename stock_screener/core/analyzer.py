@@ -222,11 +222,16 @@ class DetailedAnalyzer:
         """Try to initialize OpenAI client."""
         if AI_PROVIDERS.get('openai') and os.getenv('OPENAI_API_KEY'):
             try:
+                print(f"🤖 [AI PROVIDER] Attempting to initialize OpenAI GPT client...")
                 logger.info("Attempting to initialize OpenAI client...")
-                return openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY')), 'openai'
+                client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+                print(f"✅ [AI PROVIDER] OpenAI GPT client initialized successfully!")
+                return client, 'openai'
             except Exception as e:
+                print(f"❌ [AI PROVIDER] Failed to initialize OpenAI: {e}")
                 logger.warning(f"Failed to initialize OpenAI: {e}")
         else:
+            print(f"⚠️  [AI PROVIDER] OpenAI not available (missing package or API key)")
             logger.debug("OpenAI not available (missing package or API key)")
         return None, None
     
@@ -234,13 +239,18 @@ class DetailedAnalyzer:
         """Try to initialize Google Gemini client."""
         if AI_PROVIDERS.get('gemini') and (os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')):
             try:
+                print(f"🤖 [AI PROVIDER] Attempting to initialize Google Gemini client...")
                 logger.info("Attempting to initialize Google Gemini client...")
                 api_key = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
                 genai.configure(api_key=api_key)
-                return genai.GenerativeModel('gemini-1.5-flash'), 'gemini'
+                client = genai.GenerativeModel('gemini-1.5-flash')
+                print(f"✅ [AI PROVIDER] Google Gemini client initialized successfully!")
+                return client, 'gemini'
             except Exception as e:
+                print(f"❌ [AI PROVIDER] Failed to initialize Gemini: {e}")
                 logger.warning(f"Failed to initialize Gemini: {e}")
         else:
+            print(f"⚠️  [AI PROVIDER] Gemini not available (missing package or API key)")
             logger.debug("Gemini not available (missing package or API key)")
         return None, None
     
@@ -248,11 +258,16 @@ class DetailedAnalyzer:
         """Try to initialize Anthropic Claude client."""
         if AI_PROVIDERS.get('claude') and os.getenv('ANTHROPIC_API_KEY'):
             try:
+                print(f"🤖 [AI PROVIDER] Attempting to initialize Anthropic Claude client...")
                 logger.info("Attempting to initialize Anthropic Claude client...")
-                return anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY')), 'claude'
+                client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+                print(f"✅ [AI PROVIDER] Anthropic Claude client initialized successfully!")
+                return client, 'claude'
             except Exception as e:
+                print(f"❌ [AI PROVIDER] Failed to initialize Claude: {e}")
                 logger.warning(f"Failed to initialize Claude: {e}")
         else:
+            print(f"⚠️  [AI PROVIDER] Claude not available (missing package or API key)")
             logger.debug("Claude not available (missing package or API key)")
         return None, None
     
@@ -260,16 +275,21 @@ class DetailedAnalyzer:
         """Try to initialize Ollama local client."""
         if AI_PROVIDERS.get('ollama'):
             try:
+                print(f"🤖 [AI PROVIDER] Attempting to connect to local Ollama server...")
                 logger.info("Attempting to connect to local Ollama server...")
                 # Test if Ollama is running locally
                 response = requests.get('http://localhost:11434/api/tags', timeout=2)
                 if response.status_code == 200:
+                    print(f"✅ [AI PROVIDER] Local Ollama server connected successfully!")
                     return 'ollama_client', 'ollama'
                 else:
+                    print(f"❌ [AI PROVIDER] Ollama server returned status {response.status_code}")
                     logger.debug(f"Ollama server returned status {response.status_code}")
             except Exception as e:
+                print(f"❌ [AI PROVIDER] Ollama not available locally: {e}")
                 logger.debug(f"Ollama not available locally: {e}")
         else:
+            print(f"⚠️  [AI PROVIDER] Ollama not available (missing requests package)")
             logger.debug("Ollama not available (missing requests package)")
         return None, None
         
@@ -1097,6 +1117,15 @@ IMPORTANT:
     def _call_gemini_api(self, prompt: str) -> Dict[str, str]:
         """Call Google Gemini API with enhanced configuration for comprehensive analysis."""
         try:
+            # Log AI analysis initiation
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"\n🤖 [GEMINI API START] {timestamp}")
+            print(f"🔍 [GEMINI PROMPT] Sending analysis request to Google Gemini...")
+            print(f"   Prompt length: {len(prompt)} characters")
+            
+            # Track API call timing
+            api_start_time = time.time()
+            
             # Configure generation parameters for comprehensive analysis
             generation_config = {
                 "temperature": 0.2,
@@ -1109,14 +1138,37 @@ IMPORTANT:
                 prompt,
                 generation_config=generation_config
             )
+            
+            # Calculate API response time
+            api_duration = time.time() - api_start_time
+            
+            # Log comprehensive API response details
+            print(f"✅ [GEMINI API SUCCESS] Response received in {api_duration:.2f}s")
+            print(f"   Model: Google Gemini 1.5 Flash")
+            print(f"   Temperature: {generation_config['temperature']}")
+            print(f"   Max tokens: {generation_config['max_output_tokens']}")
+            print(f"   Response length: {len(response.text)} characters")
+            print(f"   Raw response preview: {response.text[:200]}{'...' if len(response.text) > 200 else ''}")
+            
             return self._parse_ai_response(response.text)
         except Exception as e:
+            print(f"❌ [GEMINI API ERROR] Google Gemini API call failed: {e}")
+            print(f"   Error type: {type(e).__name__}")
             logger.error(f"Gemini API call failed: {e}")
             return self._rule_based_analysis({})
     
     def _call_openai_api(self, prompt: str) -> Dict[str, str]:
         """Call OpenAI API with increased token limit for comprehensive analysis."""
         try:
+            # Log AI analysis initiation
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"\n🤖 [OPENAI API START] {timestamp}")
+            print(f"🔍 [OPENAI PROMPT] Sending analysis request to OpenAI GPT...")
+            print(f"   Prompt length: {len(prompt)} characters")
+            
+            # Track API call timing
+            api_start_time = time.time()
+            
             response = self.ai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
@@ -1127,31 +1179,85 @@ IMPORTANT:
                 temperature=0.2   # Lower temperature for more consistent analysis
             )
             
+            # Calculate API response time
+            api_duration = time.time() - api_start_time
+            
             ai_response = response.choices[0].message.content
+            
+            # Log comprehensive API response details
+            print(f"✅ [OPENAI API SUCCESS] Response received in {api_duration:.2f}s")
+            print(f"   Model: {response.model}")
+            print(f"   Temperature: 0.2")
+            print(f"   Max tokens: 1500")
+            print(f"   Usage - Prompt tokens: {response.usage.prompt_tokens}")
+            print(f"   Usage - Completion tokens: {response.usage.completion_tokens}")
+            print(f"   Usage - Total tokens: {response.usage.total_tokens}")
+            print(f"   Response length: {len(ai_response)} characters")
+            print(f"   Raw response preview: {ai_response[:200]}{'...' if len(ai_response) > 200 else ''}")
+            
             logger.info(f"Raw AI Response: {ai_response[:200]}...")  # Log first 200 chars for debugging
             
             return self._parse_ai_response(ai_response)
         except Exception as e:
+            print(f"❌ [OPENAI API ERROR] OpenAI API call failed: {e}")
+            print(f"   Error type: {type(e).__name__}")
             logger.error(f"OpenAI API call failed: {e}")
             return self._rule_based_analysis({})
     
     def _call_claude_api(self, prompt: str) -> Dict[str, str]:
         """Call Anthropic Claude API with enhanced settings for comprehensive analysis."""
         try:
+            # Log AI analysis initiation
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"\n🤖 [CLAUDE API START] {timestamp}")
+            print(f"🔍 [CLAUDE PROMPT] Sending analysis request to Anthropic Claude...")
+            print(f"   Prompt length: {len(prompt)} characters")
+            
+            # Track API call timing
+            api_start_time = time.time()
+            
             response = self.ai_client.messages.create(
                 model="claude-3-haiku-20240307",
                 max_tokens=1500,  # Increased for comprehensive analysis
                 temperature=0.2,   # Lower temperature for consistent analysis
                 messages=[{"role": "user", "content": prompt}]
             )
-            return self._parse_ai_response(response.content[0].text)
+            
+            # Calculate API response time
+            api_duration = time.time() - api_start_time
+            
+            claude_response = response.content[0].text
+            
+            # Log comprehensive API response details
+            print(f"✅ [CLAUDE API SUCCESS] Response received in {api_duration:.2f}s")
+            print(f"   Model: {response.model}")
+            print(f"   Temperature: 0.2")
+            print(f"   Max tokens: 1500")
+            print(f"   Usage - Input tokens: {response.usage.input_tokens}")
+            print(f"   Usage - Output tokens: {response.usage.output_tokens}")
+            print(f"   Response length: {len(claude_response)} characters")
+            print(f"   Raw response preview: {claude_response[:200]}{'...' if len(claude_response) > 200 else ''}")
+            
+            return self._parse_ai_response(claude_response)
         except Exception as e:
+            print(f"❌ [CLAUDE API ERROR] Anthropic Claude API call failed: {e}")
+            print(f"   Error type: {type(e).__name__}")
             logger.error(f"Claude API call failed: {e}")
             return self._rule_based_analysis({})
     
     def _call_ollama_api(self, prompt: str) -> Dict[str, str]:
         """Call local Ollama API."""
         try:
+            # Log AI analysis initiation
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"\n🤖 [OLLAMA API START] {timestamp}")
+            print(f"🔍 [OLLAMA PROMPT] Sending analysis request to local Ollama...")
+            print(f"   Prompt length: {len(prompt)} characters")
+            print(f"   Endpoint: http://localhost:11434/api/generate")
+            
+            # Track API call timing
+            api_start_time = time.time()
+            
             response = requests.post('http://localhost:11434/api/generate',
                                    json={
                                        'model': 'llama2',  # or another model you have installed
@@ -1159,12 +1265,28 @@ IMPORTANT:
                                        'stream': False
                                    },
                                    timeout=30)
+            
+            # Calculate API response time
+            api_duration = time.time() - api_start_time
+            
             if response.status_code == 200:
                 result = response.json()
-                return self._parse_ai_response(result.get('response', ''))
+                ollama_response = result.get('response', '')
+                
+                # Log comprehensive API response details
+                print(f"✅ [OLLAMA API SUCCESS] Response received in {api_duration:.2f}s")
+                print(f"   Model: llama2")
+                print(f"   Status: {response.status_code}")
+                print(f"   Response length: {len(ollama_response)} characters")
+                print(f"   Raw response preview: {ollama_response[:200]}{'...' if len(ollama_response) > 200 else ''}")
+                
+                return self._parse_ai_response(ollama_response)
             else:
                 raise Exception(f"Ollama API returned status {response.status_code}")
+                
         except Exception as e:
+            print(f"❌ [OLLAMA API ERROR] Local Ollama API call failed: {e}")
+            print(f"   Error type: {type(e).__name__}")
             logger.error(f"Ollama API call failed: {e}")
             return self._rule_based_analysis({})
     
@@ -1235,13 +1357,37 @@ IMPORTANT:
         total_stocks = len(df)
         
         for idx, (_, row) in enumerate(df.iterrows(), 1):
-            logger.info(f"Analyzing stock {idx}/{total_stocks}: {row.get('Symbol', 'Unknown')}")
+            symbol = row.get('Symbol', 'Unknown')
+            
+            # Comprehensive stock analysis logging
+            print(f"\n" + "="*80)
+            print(f"📈 [STOCK ANALYSIS {idx}/{total_stocks}] Starting analysis for {symbol}")
+            print(f"   Current Price: {row.get('Current Price', 'N/A')}")
+            print(f"   Market Cap: {row.get('Market Cap', 'N/A')}")
+            print(f"   PE Ratio: {row.get('PE Ratio', 'N/A')}")
+            print(f"   ROE: {row.get('ROE', 'N/A')}")
+            print(f"   Value Score: {row.get('Value Score', 'N/A')}")
+            print("="*80)
+            
+            logger.info(f"Analyzing stock {idx}/{total_stocks}: {symbol}")
             
             # Convert row to dict for AI analysis
             row_dict = row.to_dict()
             
+            # Track individual stock analysis timing
+            stock_analysis_start = time.time()
+            
             # Get comprehensive AI analysis
             ai_result = self.analyze_stock_with_ai(row_dict)
+            
+            # Calculate stock analysis duration
+            stock_analysis_duration = time.time() - stock_analysis_start
+            
+            # Log analysis completion for this stock
+            print(f"✅ [STOCK COMPLETED] {symbol} analysis finished in {stock_analysis_duration:.2f}s")
+            print(f"   AI Value Score: {ai_result.get('value_score', 'N/A')}")
+            print(f"   AI Sentiment: {ai_result.get('ai_sentiment', 'N/A')}")
+            print(f"   Investment Thesis Preview: {str(ai_result.get('investment_thesis', 'N/A'))[:100]}{'...' if len(str(ai_result.get('investment_thesis', 'N/A'))) > 100 else ''}")
             
             # Legacy fields for compatibility
             ai_sentiments.append(ai_result.get('ai_sentiment', 'N/A'))
@@ -1273,9 +1419,12 @@ IMPORTANT:
             growth_6_months.append(multi_period_preds.get('6_months', {}).get('growth_percent', 'N/A'))
             growth_12_months.append(multi_period_preds.get('12_months', {}).get('growth_percent', 'N/A'))
             
-            # Small delay to avoid API rate limits
+            # Rate limiting and progress logging
             if idx < total_stocks:
+                print(f"⏱️  [RATE LIMITING] Waiting 1 second before next API call...")
                 time.sleep(1)  # 1 second delay between API calls
+                remaining_stocks = total_stocks - idx
+                print(f"📊 [PROGRESS] {remaining_stocks} stocks remaining to analyze")
         
         # Add comprehensive AI analysis columns
         df['AI Sentiment'] = ai_sentiments
@@ -1308,13 +1457,36 @@ IMPORTANT:
         
         logger.info("Comprehensive AI analysis completed for all stocks")
         
+        # Comprehensive AI Analysis Summary
+        print(f"\n" + "🎯"*60)
+        print(f"🎯 [AI ANALYSIS COMPLETE] All {total_stocks} stocks analyzed successfully!")
+        print(f"🎯" + "="*58 + "🎯")
+        
         # Log analysis distribution
         sentiment_counts = pd.Series(ai_sentiments).value_counts()
         valid_scores = [float(x) for x in value_scores if str(x).replace('.','').replace('-','').isdigit()]
+        
+        print(f"📊 AI Sentiment Distribution:")
+        for sentiment, count in sentiment_counts.items():
+            print(f"   {sentiment}: {count} stocks ({count/total_stocks*100:.1f}%)")
+        
         if valid_scores:
             value_score_avg = sum(valid_scores) / len(valid_scores)
-            logger.info(f"Average Value Score: {value_score_avg:.1f}/10")
+            max_score = max(valid_scores)
+            min_score = min(valid_scores)
+            print(f"📊 Value Score Statistics:")
+            print(f"   Average: {value_score_avg:.1f}/10")
+            print(f"   Highest: {max_score:.1f}/10")
+            print(f"   Lowest: {min_score:.1f}/10")
+            high_value_stocks = len([x for x in valid_scores if x >= 7.0])
+            print(f"   High Value (≥7.0): {high_value_stocks} stocks ({high_value_stocks/len(valid_scores)*100:.1f}%)")
+        
+        logger.info(f"Average Value Score: {value_score_avg:.1f}/10" if valid_scores else "No valid value scores")
         logger.info(f"AI Sentiment Distribution: {dict(sentiment_counts)}")
+        
+        print(f"🎯" + "="*58 + "🎯")
+        print(f"🎯 Analysis complete! Check Excel output for detailed results.")
+        print(f"🎯"*60 + "\n")
         
         return df
     

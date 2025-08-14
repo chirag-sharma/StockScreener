@@ -1,6 +1,10 @@
 {
-  "date": "2025-08-09",
+  "date": "2025-08-14",
   "tickers": [
-    "ITC.NS"
+    "YESBANK.NS",
+    "RELIANCE.NS", 
+    "TCS.NS",
+    "HDFCBANK.NS",
+    "INFY.NS"
   ]
 }
