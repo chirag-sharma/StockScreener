@@ -1,0 +1,14 @@
+# Optional dependencies for enhanced price prediction features
+
+# Machine Learning Models
+scikit-learn>=1.0.0
+
+# Time Series Analysis  
+statsmodels>=0.13.0
+
+# Technical Analysis Indicators
+TA-Lib>=0.4.0
+
+# Note: TA-Lib requires separate binary installation
+# Windows: Download from https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib
+# Linux/Mac: sudo apt-get install ta-lib (or brew install ta-lib)

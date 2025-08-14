@@ -1,8 +1,56 @@
-.venv
-config/screener_config.properties
-.idea
-data/output
-src/oldScreenerDontUse.py
+# Python
 __pycache__/
-src/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+.venv/
+.env
+venv/
+ENV/
 
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+config/screener_config.properties
+data/output/
+src/oldScreenerDontUse.py
+dummy.py
+readME.txt
+
+# Build artifacts  
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp

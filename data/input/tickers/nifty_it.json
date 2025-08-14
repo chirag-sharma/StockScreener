@@ -1,7 +1,15 @@
 {
-  "date": "2025-07-15",
+  "date": "2025-08-09",
   "tickers": [
-    "TCS.NS", "INFY.NS", "HCLTECH.NS", "WIPRO.NS", "TECHM.NS",
-    "LTIM.NS", "MPHASIS.NS", "COFORGE.NS", "PERSISTENT.NS", "LTI.NS"
+    "TCS.NS",
+    "INFY.NS",
+    "HCLTECH.NS",
+    "WIPRO.NS",
+    "TECHM.NS",
+    "LTIM.NS",
+    "MPHASIS.NS",
+    "COFORGE.NS",
+    "PERSISTENT.NS",
+    "LTI.NS"
   ]
 }
