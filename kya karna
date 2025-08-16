@@ -2,3 +2,14 @@ next up
 
 price prediciton ko modularize karo
 prompt ko alag se manage karo
+
+models used 5/6
+
+% increase price prediction
+
+t seems the old service is having issues. Let me test directly with the orchestrator which we know is working:
+
+Found another issue! The Earnings Quarterly Growth is 2674.3% which is clearly wrong data from Yahoo Finance. Even after capping to 50%, it's still creating an inflated valuation.
+
+
+Why ? yfinance data is correct always, why are you capping anything ?

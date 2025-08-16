@@ -20,7 +20,7 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from stock_screener.services.pricePrediction import PricePredictionService
+from stock_screener.prediction_models import PricePredictionOrchestrator
 import pandas as pd
 import numpy as np
 from datetime import datetime
@@ -40,19 +40,19 @@ def test_prediction_stability():
         print(f"\n📊 Run {i+1}/{runs}:")
         
         # Create predictor
-        predictor = PricePredictionService(symbol, prediction_days=30)
+        orchestrator = PricePredictionOrchestrator(symbol)
         
         # Get current price (this is the main variable)
-        current_price = predictor.current_price
+        current_price = orchestrator._get_current_price()
         print(f"   Current Price: ₹{current_price:.2f}")
         
         # Get comprehensive predictions
-        result = predictor.get_comprehensive_predictions()
+        result = orchestrator.predict_comprehensive(target_days=30)
         
-        if "ensemble" in result:
-            predicted_price = result["ensemble"]["predicted_price"]
-            confidence = result["ensemble"]["confidence"]
-            methods_count = len(result["methods"])
+        if "predicted_price" in result:
+            predicted_price = result["predicted_price"]
+            confidence = result["confidence"]
+            methods_count = result.get("models_used", 6)
             
             results.append({
                 'run': i+1,

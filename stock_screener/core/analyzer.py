@@ -80,6 +80,14 @@ except ImportError:
 # Check if any AI provider is available
 HAS_AI = any(AI_PROVIDERS.values())
 
+# Import prompts library for organized prompt management
+try:
+    from ..prompts import PromptManager, PromptType
+    HAS_PROMPTS_LIBRARY = True
+except ImportError:
+    HAS_PROMPTS_LIBRARY = False
+    print("Warning: Prompts library not available, using legacy prompts")
+
 try:
     from dotenv import load_dotenv
     load_dotenv()  # Load environment variables from .env file
@@ -92,7 +100,7 @@ logger = logging.getLogger(__name__)
 
 # Import price prediction service
 try:
-    from stock_screener.services.pricePrediction import PricePredictionService
+    from stock_screener.prediction_models import PricePredictionOrchestrator, predict_stock_price
     HAS_PRICE_PREDICTION = True
     logger.info("Price prediction service available")
 except ImportError as e:
@@ -758,18 +766,66 @@ class DetailedAnalyzer:
             return {"error": "Price prediction service not available"}
         
         try:
-            predictor = PricePredictionService(symbol, prediction_days=30)
+            # Use new modular prediction system
+            orchestrator = PricePredictionOrchestrator(symbol)
             
-            # Get both single-period comprehensive predictions and multi-period predictions
-            comprehensive_results = predictor.get_comprehensive_predictions()
-            multi_period_results = predictor.get_simplified_multi_period_predictions()
+            # Get comprehensive prediction (30-day)
+            comprehensive_results = orchestrator.predict_comprehensive(target_days=30)
             
-            # Extract the ensemble result for the main output (30-day prediction)
+            # Get multi-period predictions
+            multi_period_results = {
+                '7d': orchestrator.predict_comprehensive(target_days=7),
+                '30d': comprehensive_results,  # Reuse 30-day
+                '90d': orchestrator.predict_comprehensive(target_days=90),
+                '365d': orchestrator.predict_comprehensive(target_days=365)
+            }
+            
+            # Generate monthly predictions (6-12 months) by interpolating between 90d and 365d
+            try:
+                pred_90d = multi_period_results['90d']
+                pred_365d = multi_period_results['365d']
+                
+                if ('predicted_price' in pred_90d and 'predicted_price' in pred_365d):
+                    price_90d = pred_90d['predicted_price']
+                    price_365d = pred_365d['predicted_price']
+                    current_price = comprehensive_results.get("current_price", 0)
+                    
+                    # Generate monthly predictions by interpolation
+                    monthly_results = {}
+                    for month in range(6, 13):
+                        days = month * 30  # Convert months to days
+                        
+                        if days <= 90:
+                            # Interpolate between 30d and 90d
+                            ratio = (days - 30) / (90 - 30)
+                            interpolated_price = comprehensive_results['predicted_price'] + ratio * (price_90d - comprehensive_results['predicted_price'])
+                        else:
+                            # Interpolate between 90d and 365d
+                            ratio = (days - 90) / (365 - 90)
+                            interpolated_price = price_90d + ratio * (price_365d - price_90d)
+                        
+                        # Calculate growth percentage
+                        growth_percent = 0
+                        if current_price > 0:
+                            growth_percent = round((interpolated_price - current_price) / current_price * 100, 2)
+                        
+                        monthly_results[f'{month}_months'] = {
+                            'predicted_price': round(interpolated_price, 2),
+                            'growth_percent': growth_percent,
+                            'confidence': max(0.3, pred_90d.get('confidence', 0.5) * (1 - (month - 3) * 0.05))  # Decreasing confidence
+                        }
+                    
+                    # Add monthly predictions to multi_period_results
+                    multi_period_results.update(monthly_results)
+                    
+            except Exception as e:
+                logger.warning(f"Failed to generate monthly predictions for {symbol}: {e}")
+            
+            # Extract the main prediction result 
             main_prediction = {}
-            if "ensemble" in comprehensive_results and "predicted_price" in comprehensive_results["ensemble"]:
-                ensemble = comprehensive_results["ensemble"]
+            if "predicted_price" in comprehensive_results:
                 current_price = comprehensive_results.get("current_price", 0)
-                predicted_price = ensemble["predicted_price"]
+                predicted_price = comprehensive_results["predicted_price"]
                 
                 # Calculate price change percentage
                 price_change_percent = 0
@@ -781,21 +837,34 @@ class DetailedAnalyzer:
                     "current_price": current_price,
                     "predicted_price": predicted_price,
                     "price_change_percent": price_change_percent,
-                    "confidence": ensemble["confidence"],
-                    "method": "Comprehensive Prediction (7 Methods + Ensemble)",
-                    "methods_used": list(comprehensive_results["methods"].keys()),
+                    "confidence": comprehensive_results.get("confidence", 0.5),
+                    "method": "Comprehensive Prediction (6 Models + Ensemble)",
+                    "methods_used": comprehensive_results.get("models_used", 6),
                     "risk_level": comprehensive_results.get("risk_assessment", {}).get("risk_level", "Medium"),
-                    "recommendation": ensemble.get("recommendation", "Hold")
+                    "recommendation": comprehensive_results.get("market_signal", "Hold")
                 }
                 
                 # Add multi-period predictions if available
-                if "predictions" in multi_period_results:
-                    main_prediction["multi_period_predictions"] = multi_period_results["predictions"]
-                    main_prediction["multi_period_summary"] = multi_period_results.get("summary", {})
+                if multi_period_results:
+                    # Convert to expected format
+                    period_predictions = {}
+                    for period, result in multi_period_results.items():
+                        if isinstance(result, dict) and "predicted_price" in result:
+                            period_predictions[period] = {
+                                'predicted_price': result['predicted_price'],
+                                'confidence': result.get('confidence', 0.5),
+                                'price_change_percent': result.get('price_change_pct', result.get('growth_percent', 0))
+                            }
+                    
+                    main_prediction["multi_period_predictions"] = period_predictions
+                    main_prediction["multi_period_summary"] = {
+                        'periods_analyzed': len(period_predictions),
+                        'highest_confidence': max([p.get('confidence', 0) for p in period_predictions.values()], default=0)
+                    }
                     
                     # Debug logging to trace the bug
                     logger.info(f"[PREDICTION DEBUG] {symbol} multi-period data transfer:")
-                    for period, data in multi_period_results["predictions"].items():
+                    for period, data in period_predictions.items():
                         if isinstance(data, dict):
                             price = data.get('predicted_price', 'N/A')
                             logger.info(f"[PREDICTION DEBUG]   {period}: ₹{price}")
@@ -803,10 +872,10 @@ class DetailedAnalyzer:
                 logger.info(f"Comprehensive price prediction for {symbol}: {main_prediction.get('predicted_price', 'N/A')} (Confidence: {main_prediction.get('confidence', 'N/A')})")
                 return main_prediction
             else:
-                # Fallback to quick prediction if comprehensive fails
-                prediction = predictor.get_quick_prediction()
-                logger.warning(f"Fell back to quick prediction for {symbol}")
-                return prediction
+                # Fallback to simple prediction if comprehensive fails
+                simple_prediction = predict_stock_price(symbol, days=30)
+                logger.warning(f"Fell back to simple prediction for {symbol}")
+                return simple_prediction
         except Exception as e:
             logger.error(f"Price prediction failed for {symbol}: {e}")
             return {"error": f"Price prediction failed: {str(e)}"}
@@ -814,6 +883,22 @@ class DetailedAnalyzer:
     def _create_enhanced_ai_analysis_prompt(self, symbol: str, metrics: Dict[str, Any], news: str, price_prediction: Dict) -> str:
         """Create an enhanced AI analysis prompt with price prediction context"""
         
+        if HAS_PROMPTS_LIBRARY:
+            # Use the new prompts library
+            try:
+                prompt_manager = PromptManager()
+                return prompt_manager.get_prompt(
+                    PromptType.ENHANCED_ANALYSIS,
+                    symbol=symbol,
+                    metrics=metrics,
+                    news=news,
+                    price_prediction=price_prediction,
+                    ideal_ratios=self.ideal_ratios
+                )
+            except Exception as e:
+                logger.warning(f"Failed to use prompts library: {e}, falling back to legacy prompt")
+        
+        # Fallback to legacy prompt generation
         # Start with the basic prompt
         basic_prompt = self._create_ai_analysis_prompt(symbol, metrics, news)
         
@@ -844,6 +929,21 @@ Update your TARGET_PRICE recommendation considering this technical/fundamental p
     def _create_ai_analysis_prompt(self, symbol: str, metrics: Dict[str, Any], news: str) -> str:
         """Create a comprehensive AI analysis prompt for value investing."""
         
+        if HAS_PROMPTS_LIBRARY:
+            # Use the new prompts library
+            try:
+                prompt_manager = PromptManager()
+                return prompt_manager.get_prompt(
+                    PromptType.VALUE_INVESTING_ANALYSIS,
+                    symbol=symbol,
+                    metrics=metrics,
+                    news=news,
+                    ideal_ratios=self.ideal_ratios
+                )
+            except Exception as e:
+                logger.warning(f"Failed to use prompts library: {e}, falling back to legacy prompt")
+        
+        # Legacy prompt generation (fallback)
         # Create detailed ratio analysis section
         ratio_analysis = []
         for metric, value in metrics.items():
@@ -864,7 +964,7 @@ Update your TARGET_PRICE recommendation considering this technical/fundamental p
                     ratio_analysis.append(f"- {metric}: {value} (data issue)")
             else:
                 ratio_analysis.append(f"- {metric}: {value}")
-        
+
         prompt = f"""
 Conduct a comprehensive value investing analysis for this Indian stock based on REAL DATA:
 

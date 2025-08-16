@@ -25,7 +25,8 @@ import time
 try:
     import sys
     sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
-    from stock_screener.services.pricePrediction import PricePredictionService
+    # Use new modular prediction system
+    from stock_screener.prediction_models import PricePredictionOrchestrator, predict_stock_price
     HAS_PRICE_PREDICTION = True
 except ImportError:
     HAS_PRICE_PREDICTION = False
@@ -1291,15 +1292,17 @@ def create_price_prediction_chart(stock_data):
     
     # Initialize prediction service
     try:
-        predictor = PricePredictionService(ticker_symbol)
+        # Use new modular prediction system
+        orchestrator = PricePredictionOrchestrator(ticker_symbol)
+        current_price = orchestrator._get_current_price()
         
         # Validate that we have valid price data before proceeding
-        if predictor.current_price is None or predictor.current_price <= 0:
+        if current_price is None or current_price <= 0:
             st.error("🚫 Price Data Unavailable")
             st.markdown(f"""
             **Cannot generate predictions for {symbol}:**
             - Stock price data is not available (possibly delisted)
-            - Current price: {predictor.current_price}
+            - Current price: {current_price}
             - Data source connectivity issues
             
             **Recommendations:**
@@ -1311,8 +1314,17 @@ def create_price_prediction_chart(stock_data):
         
         # Get comprehensive predictions
         with st.spinner(f"Analyzing {symbol} and generating AI predictions..."):
-            predictions = predictor.get_comprehensive_predictions()
-            multi_period = predictor.get_multi_period_predictions()
+            # Get main prediction (30-day default)
+            predictions = orchestrator.predict_comprehensive(target_days=30)
+            
+            # Get multi-period predictions (7d, 30d, 90d, 180d, 365d)
+            multi_period = {
+                '7d': orchestrator.predict_comprehensive(target_days=7),
+                '30d': predictions,  # Use the already computed 30-day prediction
+                '90d': orchestrator.predict_comprehensive(target_days=90),
+                '180d': orchestrator.predict_comprehensive(target_days=180),  # 6 months
+                '365d': orchestrator.predict_comprehensive(target_days=365)
+            }
         
         if "error" not in predictions:
             # Create tabs for different prediction views
@@ -1393,10 +1405,10 @@ def create_price_prediction_chart(stock_data):
                 # Time horizon information - more concise
                 st.info("⏰ **Time Horizons:** Short-term predictions are for 30 days. Fundamental shows intrinsic fair value (6-12 months horizon).")
                 
-                # Create prediction comparison
-                pred_methods = predictions.get('methods', {})
+                # Create prediction comparison using new modular structure
+                individual_preds = predictions.get('individual_predictions', {})
                 
-                if pred_methods:
+                if individual_preds:
                     # Display predictions in a balanced 3-column layout
                     st.markdown("**🎯 AI Prediction Methods Overview**")
                     
@@ -1405,39 +1417,45 @@ def create_price_prediction_chart(stock_data):
                     
                     with pred_cols_row1[0]:
                         st.markdown("**📈 Technical Analysis**")
-                        if 'technical' in pred_methods:
-                            tech = pred_methods['technical']
-                            if 'predicted_price' in tech:
+                        if 'technical' in individual_preds:
+                            tech = individual_preds['technical']
+                            if 'error' not in tech and 'predicted_price' in tech:
                                 st.metric(
                                     "30-Day Price",
                                     f"₹{tech['predicted_price']:.2f}",
                                     delta=f"{((tech['predicted_price']/current_price - 1) * 100):+.1f}%"
                                 )
                                 st.caption(f"📊 Confidence: {tech.get('confidence', 'N/A')}")
+                            else:
+                                st.error("❌ Model Error")
                     
                     with pred_cols_row1[1]:
                         st.markdown("**🤖 Machine Learning**")
-                        if 'machine_learning' in pred_methods:
-                            ml = pred_methods['machine_learning']
-                            if 'predicted_price' in ml:
+                        if 'machine_learning' in individual_preds:
+                            ml = individual_preds['machine_learning']
+                            if 'error' not in ml and 'predicted_price' in ml:
                                 st.metric(
                                     "30-Day Price",
                                     f"₹{ml['predicted_price']:.2f}",
                                     delta=f"{((ml['predicted_price']/current_price - 1) * 100):+.1f}%"
                                 )
                                 st.caption(f"🔧 Model: {ml.get('best_model', 'N/A')}")
+                            else:
+                                st.error("❌ Model Error")
                     
                     with pred_cols_row1[2]:
                         st.markdown("**📊 Volume Analysis**")
-                        if 'volume' in pred_methods:
-                            vol = pred_methods['volume']
-                            if 'predicted_price' in vol:
+                        if 'volume_analysis' in individual_preds:
+                            vol = individual_preds['volume_analysis']
+                            if 'error' not in vol and 'predicted_price' in vol:
                                 st.metric(
                                     "30-Day Price",
                                     f"₹{vol['predicted_price']:.2f}",
                                     delta=f"{((vol['predicted_price']/current_price - 1) * 100):+.1f}%"
                                 )
                                 st.caption("📈 Volume-based prediction")
+                            else:
+                                st.error("❌ Model Error")
                     
                     st.markdown("---")  # Visual separator
                     
@@ -1446,95 +1464,96 @@ def create_price_prediction_chart(stock_data):
                     
                     with pred_cols_row2[0]:
                         st.markdown("**💰 Fundamental Analysis**")
-                        if 'fundamental' in pred_methods:
-                            fund = pred_methods['fundamental']
-                            if 'predicted_price' in fund:
+                        if 'fundamental' in individual_preds:
+                            fund = individual_preds['fundamental']
+                            if 'error' not in fund and 'predicted_price' in fund:
                                 st.metric(
                                     "Fair Value",
                                     f"₹{fund['predicted_price']:.2f}",
                                     delta=f"{((fund['predicted_price']/current_price - 1) * 100):+.1f}%"
                                 )
                                 st.caption("⏰ Long-term (6-12 months)")
+                            else:
+                                st.error("❌ Model Error")
                     
                     with pred_cols_row2[1]:
                         st.markdown("**📈 Time Series**")
-                        if 'time_series' in pred_methods:
-                            ts = pred_methods['time_series']
-                            if 'predicted_price' in ts:
+                        if 'time_series' in individual_preds:
+                            ts = individual_preds['time_series']
+                            if 'error' not in ts and 'predicted_price' in ts:
                                 st.metric(
                                     "30-Day Price",
                                     f"₹{ts['predicted_price']:.2f}",
                                     delta=f"{((ts['predicted_price']/current_price - 1) * 100):+.1f}%"
                                 )
-                                st.caption(f"📊 ARIMA (1,1,1)")
+                                st.caption(f"📊 ARIMA & Time Series")
+                            else:
+                                st.error("❌ Model Error")
                     
                     with pred_cols_row2[2]:
                         st.markdown("**🔍 Pattern Recognition**")
-                        if 'pattern' in pred_methods:
-                            pattern = pred_methods['pattern']
-                            if 'predicted_price' in pattern:
+                        if 'pattern_recognition' in individual_preds:
+                            pattern = individual_preds['pattern_recognition']
+                            if 'error' not in pattern and 'predicted_price' in pattern:
                                 st.metric(
                                     "30-Day Price",
                                     f"₹{pattern['predicted_price']:.2f}",
                                     delta=f"{((pattern['predicted_price']/current_price - 1) * 100):+.1f}%"
                                 )
                                 st.caption("🔍 Chart pattern analysis")
+                            else:
+                                st.error("❌ Model Error")
                 
-                # Ensemble prediction (main prediction)
-                if 'ensemble' in predictions:
+                # Main Ensemble Prediction (30-day)
+                if 'predicted_price' in predictions:
                     st.markdown("---")
                     st.markdown("##### 🎯 **Final AI Prediction (30-Day Ensemble Forecast)**")
                     
-                    ensemble = predictions['ensemble']
-                    if 'predicted_price' in ensemble:
-                        ensemble_price = ensemble['predicted_price']
-                        
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric(
-                                "AI Predicted Price",
-                                f"₹{ensemble_price:.2f}",
-                                delta=f"{((ensemble_price/current_price - 1) * 100):+.1f}%"
-                            )
-                        with col2:
-                            confidence = ensemble.get('confidence_score', 0)
-                            confidence_color = "🟢" if confidence > 0.7 else "🟡" if confidence > 0.5 else "🔴"
-                            st.metric(
-                                "Confidence Score",
-                                f"{confidence_color} {confidence:.1%}"
-                            )
-                        with col3:
-                            prediction_days = predictions.get('prediction_days', 30)
-                            st.metric(
-                                "Time Horizon",
-                                f"{prediction_days} days"
-                            )
+                    ensemble_price = predictions['predicted_price']
+                    
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric(
+                            "AI Predicted Price",
+                            f"₹{ensemble_price:.2f}",
+                            delta=f"{((ensemble_price/current_price - 1) * 100):+.1f}%"
+                        )
+                    with col2:
+                        confidence = predictions.get('confidence', 0)
+                        confidence_color = "🟢" if confidence > 0.7 else "🟡" if confidence > 0.5 else "🔴"
+                        st.metric(
+                            "Confidence Score",
+                            f"{confidence_color} {confidence:.1%}"
+                        )
+                    with col3:
+                        models_used = predictions.get('models_used', 0)
+                        st.metric(
+                            "Models Used",
+                            f"⚙️ {models_used}/6"
+                        )
             
             with pred_tab3:
                 st.markdown("##### 📈 Multi-Period Price Forecasts")
                 
                 # Check if we have multi-period prediction data
-                periods_data = None
+                # The multi_period structure is {'7d': predictions, '30d': predictions, ...}
+                periods_data = multi_period
                 
-                if 'multi_period_predictions' in multi_period:
-                    periods_data = multi_period['multi_period_predictions']
-                elif 'periods' in multi_period:
-                    periods_data = multi_period['periods']
-                
-                if periods_data:
+                if periods_data and len(periods_data) > 0:
                     # Create comprehensive dataframe for multi-period predictions
                     period_data = []
                     for period_name, period_data_dict in periods_data.items():
-                        if 'ensemble' in period_data_dict and 'predicted_price' in period_data_dict['ensemble']:
-                            predicted_price = period_data_dict['ensemble']['predicted_price']
+                        # Check if this period has valid predictions (no error)
+                        if isinstance(period_data_dict, dict) and 'error' not in period_data_dict and 'predicted_price' in period_data_dict:
+                            predicted_price = period_data_dict['predicted_price']
                             change_pct = ((predicted_price/current_price - 1) * 100)
                             
                             period_data.append({
-                                'Period': period_name.replace('_', ' ').title(),  # Format period names
+                                'Period': period_name.replace('d', ' days').replace('30 days', '1 Month').replace('90 days', '3 Months').replace('180 days', '6 Months').replace('365 days', '12 Months').replace('7 days', '1 Week'),  # Format period names
                                 'Predicted Price': predicted_price,
                                 'Target Price': target_price,  # Add target price
                                 'Price Change %': change_pct,   # Price change %
-                                'Confidence': period_data_dict['ensemble'].get('confidence_score', 0)
+                                'Confidence': period_data_dict.get('confidence', 0)
                             })
                     
                     if period_data:
@@ -1548,9 +1567,9 @@ def create_price_prediction_chart(stock_data):
                         twelve_month_data = None
                         
                         for _, row in df_periods.iterrows():
-                            if '6' in str(row['Period']) and ('month' in str(row['Period']).lower() or 'Month' in str(row['Period'])):
+                            if '6 Months' in str(row['Period']):
                                 six_month_data = row
-                            elif '12' in str(row['Period']) and ('month' in str(row['Period']).lower() or 'Month' in str(row['Period'])):
+                            elif '12 Months' in str(row['Period']):
                                 twelve_month_data = row
                         
                         # Create enhanced metrics display

@@ -19,7 +19,7 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from stock_screener.services.pricePrediction import PricePredictionService, get_batch_predictions
+from stock_screener.prediction_models import PricePredictionOrchestrator, predict_stock_price
 import json
 
 # Configure logging
@@ -116,7 +116,14 @@ def main():
     try:
         if args.batch:
             print("🔄 Running batch price predictions...")
-            results = get_batch_predictions(args.symbols, args.days)
+            # Implement batch processing with new system
+            results = {}
+            for symbol in args.symbols:
+                try:
+                    prediction = predict_stock_price(symbol, days=args.days)
+                    results[symbol] = prediction
+                except Exception as e:
+                    results[symbol] = {"error": str(e)}
             
             if args.json:
                 print(json.dumps(results, indent=2))
@@ -133,8 +140,8 @@ def main():
             symbol = args.symbols[0]
             print(f"🔄 Running comprehensive analysis for {symbol}...")
             
-            predictor = PricePredictionService(symbol, args.days)
-            predictions = predictor.get_comprehensive_predictions()
+            orchestrator = PricePredictionOrchestrator(symbol)
+            predictions = orchestrator.predict_comprehensive(target_days=args.days)
             
             if args.json:
                 print(json.dumps(predictions, indent=2))
@@ -146,8 +153,7 @@ def main():
             for symbol in args.symbols:
                 print(f"\n🔄 Getting quick prediction for {symbol}...")
                 
-                predictor = PricePredictionService(symbol, args.days)
-                prediction = predictor.get_quick_prediction()
+                prediction = predict_stock_price(symbol, days=args.days)
                 
                 if args.json:
                     print(json.dumps(prediction, indent=2))
