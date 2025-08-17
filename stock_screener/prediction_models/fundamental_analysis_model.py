@@ -300,7 +300,7 @@ class FundamentalAnalysisModel(BasePredictionModel):
             return None
     
     def _graham_formula(self) -> Optional[Dict]:
-        """Calculate price using Benjamin Graham's formula with robust data validation."""
+        """Calculate price using Benjamin Graham's formula - pure YFinance data, no filtering."""
         try:
             eps = self.fundamental_data.get('trailingEps')
             growth_rate = self.fundamental_data.get('earningsQuarterlyGrowth', 0)
@@ -309,36 +309,25 @@ class FundamentalAnalysisModel(BasePredictionModel):
             if not eps or eps <= 0 or not current_price:
                 return None
             
-            # Robust growth rate validation and capping
-            if growth_rate is None or abs(growth_rate) > 10:  # More than 1000% is likely data error
-                # Fallback to industry/market average growth (assume 5-15%)
-                growth_rate = 0.10  # 10% default
-                self.logger.warning(f"Using default growth rate for {self.symbol} due to extreme data: {growth_rate}")
+            # Use YFinance data as-is, no filtering or caps
+            if growth_rate is None:
+                growth_rate = 0.10  # Only if completely missing
+                self.logger.info(f"No growth rate data for {self.symbol}, using default: 10%")
             
-            # Convert to percentage and cap to reasonable ranges
-            growth_rate_pct = max(-20, min(30, growth_rate * 100))  # Cap between -20% and +30%
+            # Convert to percentage and use directly
+            growth_rate_pct = growth_rate * 100
             
-            # Graham Formula: EPS * (8.5 + 2 * growth_rate)
-            # Additional safeguard: ensure multiplier doesn't exceed 3x current P/E
-            current_pe = current_price / eps if eps > 0 else 20
-            max_reasonable_multiplier = min(50, current_pe * 3)  # No more than 3x current P/E or 50
-            
-            multiplier = max(5, min(max_reasonable_multiplier, 8.5 + 2 * growth_rate_pct))
+            # Graham Formula: EPS * (8.5 + 2 * growth_rate) - no modifications
+            multiplier = 8.5 + 2 * growth_rate_pct
             price = eps * multiplier
-            
-            # Final sanity check: don't predict more than 2x current price
-            if price > 2 * current_price:
-                price = min(price, current_price * 1.5)  # Cap at 50% increase
-                self.logger.warning(f"Capped Graham formula prediction for {self.symbol} to avoid extreme valuation")
             
             return {
                 'price': price,
                 'method': "Graham Formula",
-                'weight': 0.1,  # 10% weight in ensemble
+                'weight': 0.2,
                 'growth_rate_used': growth_rate_pct,
                 'eps': eps,
-                'multiplier': multiplier,
-                'capped': price < eps * multiplier  # Track if we had to cap the result
+                'multiplier': multiplier
             }
             
         except Exception as e:
@@ -346,7 +335,7 @@ class FundamentalAnalysisModel(BasePredictionModel):
             return None
     
     def _revenue_growth_valuation(self) -> Optional[Dict]:
-        """Calculate price based on revenue growth and margins with robust validation."""
+        """Calculate price based on revenue growth and margins - trusting YFinance data."""
         try:
             revenue_growth = self.fundamental_data.get('revenueGrowth')
             profit_margins = self.fundamental_data.get('profitMargins')
@@ -357,34 +346,21 @@ class FundamentalAnalysisModel(BasePredictionModel):
             if not all([revenue_growth, profit_margins, market_cap, shares_outstanding, current_price]):
                 return None
             
-            # Validate and cap revenue growth to reasonable ranges
-            if abs(revenue_growth) > 2:  # More than 200% is likely data error
-                revenue_growth = 0.05  # Default to 5% growth
-                self.logger.warning(f"Using default revenue growth for {self.symbol} due to extreme data")
+            # Trust YFinance data completely - no artificial caps
+            # Calculate growth and margin factors based on actual data
+            growth_factor = 1 + revenue_growth  # Direct application of growth rate
+            margin_factor = 1 + profit_margins  # Direct application of margin improvement
             
-            # Validate profit margins
-            if abs(profit_margins) > 0.5:  # More than 50% margin is suspicious for most companies
-                profit_margins = max(0.01, min(0.3, profit_margins))  # Cap between 1-30%
-            
-            # Conservative factor calculations
-            growth_factor = max(0.8, min(1.5, 1 + revenue_growth))  # Much more conservative range
-            margin_factor = max(0.8, min(1.3, 1 + profit_margins))   # Much more conservative range
-            
-            # Conservative base multiple
-            revenue_multiple = growth_factor * margin_factor  # Remove the *2 multiplier
+            # Apply factors to calculate revenue multiple
+            revenue_multiple = growth_factor * margin_factor
             
             # Apply the multiple to current price
             price = current_price * revenue_multiple
             
-            # Final safety check: cap at 50% increase from current price
-            if price > current_price * 1.5:
-                price = current_price * 1.3  # Cap at 30% increase instead
-                self.logger.warning(f"Capped revenue growth valuation for {self.symbol}")
-            
             return {
                 'price': price,
                 'method': "Revenue Growth Valuation",
-                'weight': 0.05,  # 5% weight in ensemble
+                'weight': 0.15,  # Increased weight since we trust the data
                 'growth_factor': growth_factor,
                 'margin_factor': margin_factor,
                 'multiple_applied': revenue_multiple
