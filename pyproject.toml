@@ -12,7 +12,7 @@ authors = [
 ]
 license = {text = "MIT"}
 requires-python = ">=3.8"
-keywords = ["stock", "screener", "analysis", "AI", "investing", "value-investing"]
+keywords = ["stock", "screener", "analysis", "AI", "investing", "value-investing", "financial analysis", "investment"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
@@ -25,7 +25,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Office/Business :: Financial :: Investment",
 ]
-keywords = ["stock", "screener", "value investing", "financial analysis", "investment"]
 
 dependencies = [
     "yfinance>=0.2.28",
