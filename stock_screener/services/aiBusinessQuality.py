@@ -8,6 +8,14 @@ import logging
 import os
 import json
 import time
+
+# Import prompts library
+try:
+    from ..prompts import get_business_quality_prompt, PromptManager, PromptType
+    HAS_PROMPTS_LIBRARY = True
+except ImportError:
+    HAS_PROMPTS_LIBRARY = False
+    print("Warning: Prompts library not available, using legacy prompts")
 from datetime import datetime
 
 # Setup logging for the module
@@ -50,7 +58,33 @@ def get_business_quality_analysis(symbol, roe_trend, margin_trend):
         }
     
     # Construct the prompt for the AI model
-    prompt = f"""
+    if HAS_PROMPTS_LIBRARY:
+        # Use the new prompts library
+        try:
+            prompt = get_business_quality_prompt(
+                symbol=symbol,
+                roe_trend=roe_trend,
+                margin_trend=margin_trend
+            )
+        except Exception as e:
+            print(f"Warning: Failed to use prompts library ({e}), falling back to legacy prompt")
+            # Fallback to legacy prompt
+            prompt = f"""
+You are a value investing analyst.
+
+A stock {symbol} has the following historical performance:
+
+ROE (%): {roe_trend}
+Operating Margin (%): {margin_trend}
+
+Analyze the business quality. Is it consistent, improving, or declining? Give a short analysis and rate the business quality as one of: High, Medium, Low.
+Respond in JSON format with fields:
+- "Business Quality Score"
+- "AI Business Commentary"
+    """
+    else:
+        # Legacy prompt
+        prompt = f"""
 You are a value investing analyst.
 
 A stock {symbol} has the following historical performance:

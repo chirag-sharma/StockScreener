@@ -110,7 +110,7 @@ def enhance_prediction_consistency():
     print("🔧 ENHANCING PREDICTION CONSISTENCY")
     print("=" * 50)
     
-    from stock_screener.services.pricePrediction import PricePredictionService
+    from stock_screener.prediction_models import PricePredictionOrchestrator
     
     # Create consistency manager
     consistency_manager = PredictionConsistencyManager()
@@ -128,14 +128,14 @@ def enhance_prediction_consistency():
         print(f"   ✅ Using cached prediction: ₹{cached.get('predicted_price', 'N/A')}")
         prediction1 = cached
     else:
-        predictor = PricePredictionService(symbol, prediction_days)
-        comprehensive = predictor.get_comprehensive_predictions()
-        if "ensemble" in comprehensive:
+        orchestrator = PricePredictionOrchestrator(symbol)
+        comprehensive = orchestrator.predict_comprehensive(target_days=prediction_days)
+        if "predicted_price" in comprehensive:
             prediction1 = {
-                "predicted_price": comprehensive["ensemble"]["predicted_price"],
-                "confidence": comprehensive["ensemble"]["confidence"],
+                "predicted_price": comprehensive["predicted_price"],
+                "confidence": comprehensive["confidence"],
                 "current_price": comprehensive["current_price"],
-                "methods": list(comprehensive["methods"].keys())
+                "methods": comprehensive.get("models_used", 6)
             }
             consistency_manager.cache_prediction(symbol, prediction_days, prediction1)
             print(f"   🆕 Generated fresh prediction: ₹{prediction1['predicted_price']}")
@@ -150,14 +150,14 @@ def enhance_prediction_consistency():
         prediction2 = cached
     else:
         print("   ⚠️ No cache available, generating fresh...")
-        predictor = PricePredictionService(symbol, prediction_days)
-        comprehensive = predictor.get_comprehensive_predictions()
-        if "ensemble" in comprehensive:
+        orchestrator = PricePredictionOrchestrator(symbol)
+        comprehensive = orchestrator.predict_comprehensive(target_days=prediction_days)
+        if "predicted_price" in comprehensive:
             prediction2 = {
-                "predicted_price": comprehensive["ensemble"]["predicted_price"],
-                "confidence": comprehensive["ensemble"]["confidence"],
+                "predicted_price": comprehensive["predicted_price"],
+                "confidence": comprehensive["confidence"],
                 "current_price": comprehensive["current_price"],
-                "methods": list(comprehensive["methods"].keys())
+                "methods": comprehensive.get("models_used", 6)
             }
         else:
             prediction2 = None

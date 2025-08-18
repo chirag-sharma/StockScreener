@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append('/Users/chirag/PycharmProjects/StockScreener')
 
-from stock_screener.services.pricePrediction import PricePredictionService
+from stock_screener.prediction_models import PricePredictionOrchestrator
 from stock_screener.core.analyzer import DetailedAnalyzer
 import json
 
@@ -25,16 +25,21 @@ def test_monthly_prediction_flow():
     print("-" * 50)
     
     try:
-        predictor = PricePredictionService(symbol, prediction_days=30)
-        multi_period = predictor.get_simplified_multi_period_predictions()
+        orchestrator = PricePredictionOrchestrator(symbol)
+        multi_period = {
+            '7d': orchestrator.predict_comprehensive(target_days=7),
+            '30d': orchestrator.predict_comprehensive(target_days=30),
+            '90d': orchestrator.predict_comprehensive(target_days=90),
+            '365d': orchestrator.predict_comprehensive(target_days=365)
+        }
         
         print(f"✅ Prediction service data structure:")
-        if 'predictions' in multi_period:
-            for period, data in multi_period['predictions'].items():
-                predicted_price = data.get('predicted_price', 'N/A')
+        for period, data in multi_period.items():
+            if 'predicted_price' in data:
+                predicted_price = data['predicted_price']
                 print(f"   {period}: ₹{predicted_price}")
-        else:
-            print("❌ No predictions found!")
+            else:
+                print(f"   {period}: Error - {data.get('error', 'Unknown')}")
             
     except Exception as e:
         print(f"❌ Error in prediction service: {e}")
@@ -74,9 +79,10 @@ def test_monthly_prediction_flow():
     
     try:
         # Mock stock data for the analyzer
+        current_price = orchestrator._get_current_price()
         stock_data = {
             'Symbol': symbol,
-            'Current Price (₹)': predictor.current_price,
+            'Current Price (₹)': current_price,
             'PE Ratio': 10.0,
             'Value Score': 60.0
         }
